@@ -12,7 +12,7 @@
   | obtain it through the world-wide-web, please send a note to          |
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
-  | Author:                                                              |
+  | Author: Arpad Ray <arpad@php.net>                                    |
   +----------------------------------------------------------------------+
 */
 
@@ -20,6 +20,10 @@
 #define PHP_RE2_H
 
 #define PHP_RE2_EXTVER "0.0.1-dev"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern zend_module_entry re2_module_entry;
 #define phpext_re2_ptr &re2_module_entry
@@ -36,11 +40,17 @@ extern zend_module_entry re2_module_entry;
 #include "TSRM.h"
 #endif
 
+PHP_FUNCTION(re2_match);
+
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);
 PHP_RINIT_FUNCTION(re2);
 PHP_RSHUTDOWN_FUNCTION(re2);
 PHP_MINFO_FUNCTION(re2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #ifdef ZTS
 #define RE2_G(v) TSRMG(re2_globals_id, zend_re2_globals *, v)
