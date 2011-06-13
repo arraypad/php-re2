@@ -1,0 +1,8 @@
+// vim:ft=javascript
+
+ARG_WITH("re2", "for re2 support", "no");
+
+if (PHP_RE2 != "no") {
+	EXTENSION("re2", "re2.cpp");
+}
+
