@@ -316,7 +316,7 @@ PHP_FUNCTION(re2_match)
 }
 /*	}}} */
 
-/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches [, int flags [, int $offset = 0]])
+/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches [, int $flags = 0 [, int $offset = 0]])
 	Returns how many times the pattern matched the subject. */
 PHP_FUNCTION(re2_match_all)
 {

@@ -17,11 +17,11 @@ The main differences are:
 * Pattern delimiters (the "/" in "/foo/") are not required.
 * The functions which accept a pattern will take either a string or an RE2 object for the pattern.
 
-#### bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_MATCH_PARTIAL]])
+#### bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE [, int $offset = 0]]])
 
 Returns whether the pattern matches the subject.
 
-#### int re2_match_all(mixed $pattern, string $subject, array &$matches)
+#### int re2_match_all(mixed $pattern, string $subject, array &$matches [, int $flags = 0 [, int $offset = 0]])
 
 Returns how many times the pattern matched the subject.
 
@@ -29,7 +29,7 @@ Returns how many times the pattern matched the subject.
 
 Replaces all matches of the pattern with the replacement.
 
-#### array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_MATCH_PARTIAL])
+#### array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_ANCHOR_NONE])
 
 Return array entries which match the pattern (or which don't, with RE2_GREP_INVERT.)
 
@@ -51,6 +51,8 @@ Represents a compiled regex pattern.
 Options to be used for a particular pattern.
 
 #### RE2_Options RE2_Options::__construct()
+
+Construct a new RE2_Options object.
 
 #### string RE2_Options::getEncoding()
 #### void RE2_Options::setEncoding(string $encoding)
