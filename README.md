@@ -46,7 +46,7 @@ Represents a compiled regex pattern.
 
 Options to be used for a particular pattern.
 
-#### RE2_Options RE2_Options::__construct()
+### RE2_Options RE2_Options::__construct()
 
 ### string RE2_Options::getEncoding()
 ### void RE2_Options::setEncoding(string $encoding)
