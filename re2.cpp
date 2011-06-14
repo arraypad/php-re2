@@ -50,6 +50,11 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_replace, 0, 0, 3)
 	ZEND_ARG_INFO(0, flags)
 	ZEND_ARG_INFO(1, count)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_grep, 0, 0, 2)
+	ZEND_ARG_INFO(0, pattern)
+	ZEND_ARG_INFO(0, input)
+	ZEND_ARG_INFO(0, flags)
+ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, pattern)
 	ZEND_ARG_INFO(0, options)
@@ -64,6 +69,7 @@ const zend_function_entry re2_functions[] = {
 	PHP_FE(re2_match, arginfo_re2_match)
 	PHP_FE(re2_match_all, arginfo_re2_match_all)
 	PHP_FE(re2_replace, arginfo_re2_replace)
+	PHP_FE(re2_grep, arginfo_re2_grep)
 	PHP_FE(re2_quote, NULL)
 	{NULL, NULL, NULL}
 };
@@ -203,9 +209,11 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 /* {{{ constants */
 #define RE2_MATCH_PARTIAL	1
 #define RE2_MATCH_FULL		2
+#define RE2_GREP_INVERT		4
 
 #define RE2_REPLACE_GLOBAL	1
 #define RE2_REPLACE_FIRST   2
+
 /* }}} */
 
 static void populate_matches(RE2 *re2, zval *matches, std::string *str, int argc)
@@ -325,7 +333,6 @@ PHP_FUNCTION(re2_match_all)
 			}
 			was_empty = true;
 		}
-		
 
 		MAKE_STD_ZVAL(piece_matches);
 		array_init_size(piece_matches, argc);
@@ -368,6 +375,65 @@ PHP_FUNCTION(re2_replace)
 	}
 
 	RETVAL_STRINGL(subject_str.c_str(), subject_str.length(), 1);
+}
+/* }}} */
+
+/* {{{ PHP_FUNCTION(re2_grep) */
+PHP_FUNCTION(re2_grep)
+{
+	int argc;
+	long flags;
+	zval *pattern, *input, **entry;
+	RE2 *re2;
+	bool did_match, full, invert;
+	char *string_key;
+	ulong num_key;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "za|l", &pattern, &input, &flags) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	RE2_GET_PATTERN;
+
+	invert = ZEND_NUM_ARGS() == 3 && flags & RE2_GREP_INVERT;
+	full = ZEND_NUM_ARGS() == 3 && flags & RE2_MATCH_FULL;
+
+	array_init(return_value);
+	zend_hash_internal_pointer_reset(Z_ARRVAL_P(input));
+	while (zend_hash_get_current_data(Z_ARRVAL_P(input), (void **)&entry) == SUCCESS) {
+		zval subject = **entry;
+
+		if (Z_TYPE_PP(entry) != IS_STRING) {
+			zval_copy_ctor(&subject);
+			convert_to_string(&subject);
+		}
+
+		if (full) {
+			did_match = RE2::FullMatch(Z_STRVAL(subject), *re2);
+		} else {
+			did_match = RE2::PartialMatch(Z_STRVAL(subject), *re2);
+		}
+
+		if (did_match ^ invert) {
+			Z_ADDREF_PP(entry);
+
+			switch (zend_hash_get_current_key(Z_ARRVAL_P(input), &string_key, &num_key, 0)) {
+				case HASH_KEY_IS_STRING:
+					zend_hash_update(Z_ARRVAL_P(return_value), string_key, strlen(string_key) + 1, entry, sizeof(zval *), NULL);
+					break;
+				case HASH_KEY_IS_LONG:
+					zend_hash_index_update(Z_ARRVAL_P(return_value), num_key, entry, sizeof(zval *), NULL);
+					break;
+			}
+		}
+
+		if (Z_TYPE_PP(entry) != IS_STRING) {
+			zval_dtor(&subject);
+		}
+
+		zend_hash_move_forward(Z_ARRVAL_P(input));
+	}
+	zend_hash_internal_pointer_reset(Z_ARRVAL_P(input));
 }
 /* }}} */
 
@@ -566,6 +632,7 @@ PHP_MINIT_FUNCTION(re2)
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_MATCH_FULL", RE2_MATCH_FULL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_MATCH_PARTIAL", RE2_MATCH_PARTIAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_GREP_INVERT", RE2_GREP_INVERT, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_REPLACE_GLOBAL", RE2_REPLACE_GLOBAL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_REPLACE_FIRST", RE2_REPLACE_FIRST, CONST_CS | CONST_PERSISTENT);
 

@@ -43,6 +43,7 @@ extern zend_module_entry re2_module_entry;
 PHP_FUNCTION(re2_match);
 PHP_FUNCTION(re2_match_all);
 PHP_FUNCTION(re2_replace);
+PHP_FUNCTION(re2_grep);
 PHP_FUNCTION(re2_quote);
 
 PHP_METHOD(RE2, __construct);
