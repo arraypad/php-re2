@@ -42,6 +42,15 @@ var_dump(re2_match('(Hello) (\w+) (.*)', 'Hello regex world', $matches), $matche
 echo "*** Testing re2_match(): named groups\n";
 var_dump(re2_match('(?P<foo>Hello) (\w+) (?P<bar>.*)', 'Hello regex world', $matches), $matches);
 
+echo "*** Testing re2_match(): 1 subpattern & offset capture\n";
+var_dump(re2_match('Hello (\w+) world', 'Hello regex world', $matches, RE2_OFFSET_CAPTURE), $matches);
+
+echo "*** Testing re2_match(): offset & offset capture\n";
+var_dump(re2_match('Hello (\w+) world', 'Hello regex world', $matches, RE2_OFFSET_CAPTURE, 5), $matches);
+
+echo "*** Testing re2_match(): named groups & offset capture\n";
+var_dump(re2_match('(?P<foo>Hello) (\w+) (?P<bar>.*)', 'Hello regex world', $matches, RE2_OFFSET_CAPTURE), $matches);
+
 ?>
 --EXPECTF--
 *** Testing re2_match(): no subpatterns, positive (default) unanchored match
@@ -90,13 +99,99 @@ array(4) {
 }
 *** Testing re2_match(): named groups
 bool(true)
-array(4) {
+array(6) {
   [0]=>
   string(17) "Hello regex world"
   ["foo"]=>
   string(5) "Hello"
   [1]=>
+  string(5) "Hello"
+  [2]=>
   string(5) "regex"
   ["bar"]=>
   string(5) "world"
+  [3]=>
+  string(5) "world"
+}
+*** Testing re2_match(): 1 subpattern & offset capture
+bool(true)
+array(2) {
+  [0]=>
+  array(2) {
+    [0]=>
+    string(17) "Hello regex world"
+    [1]=>
+    int(0)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    string(5) "regex"
+    [1]=>
+    int(6)
+  }
+}
+*** Testing re2_match(): offset & offset capture
+bool(false)
+array(2) {
+  [0]=>
+  array(2) {
+    [0]=>
+    string(17) "Hello regex world"
+    [1]=>
+    int(0)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    string(5) "regex"
+    [1]=>
+    int(6)
+  }
+}
+*** Testing re2_match(): named groups & offset capture
+bool(true)
+array(6) {
+  [0]=>
+  array(2) {
+    [0]=>
+    string(17) "Hello regex world"
+    [1]=>
+    int(0)
+  }
+  ["foo"]=>
+  array(2) {
+    [0]=>
+    string(5) "Hello"
+    [1]=>
+    int(0)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    string(5) "Hello"
+    [1]=>
+    int(0)
+  }
+  [2]=>
+  array(2) {
+    [0]=>
+    string(5) "regex"
+    [1]=>
+    int(6)
+  }
+  ["bar"]=>
+  array(2) {
+    [0]=>
+    string(5) "world"
+    [1]=>
+    int(12)
+  }
+  [3]=>
+  array(2) {
+    [0]=>
+    string(5) "world"
+    [1]=>
+    int(12)
+  }
 }

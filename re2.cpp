@@ -211,6 +211,7 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 #define RE2_ANCHOR_START	1
 #define RE2_ANCHOR_BOTH		2
 #define RE2_GREP_INVERT		4
+#define RE2_OFFSET_CAPTURE	8
 #define RE2_REPLACE_GLOBAL	1
 #define RE2_REPLACE_FIRST   2
 /* }}} */
@@ -230,22 +231,32 @@ static RE2::Anchor _php_re2_get_anchor_from_flags(int flags)
 	return RE2::UNANCHORED;
 }
 
-static void _php_re2_populate_matches(RE2 *re2, zval *matches, re2::StringPiece *pieces, int argc)
+static void _php_re2_populate_matches(RE2 *re2, zval *matches, re2::StringPiece subject_piece, re2::StringPiece *pieces, int argc, long flags)
 {
+	zval *piece = NULL;
 	std::string *str;
 	const std::map<int, std::string> named_groups = re2->CapturingGroupNames();
 
-	str = &pieces[0].ToString();
-	add_next_index_stringl(matches, str->c_str(), pieces[0].size(), 1);
-	for (int i = 1; i < argc; i++) {
+	for (int i = 0; i < argc; i++) {
 		str = &pieces[i].ToString();
-		std::map<int, std::string>::const_iterator iter = named_groups.find(i);
-		if (iter == named_groups.end()) {
-			add_next_index_stringl(matches, str->c_str(), pieces[i].size(), 1);
+
+		MAKE_STD_ZVAL(piece);
+		if (flags & RE2_OFFSET_CAPTURE) {
+			array_init_size(piece, 2);
+			add_next_index_stringl(piece, str->c_str(), pieces[i].size(), 1);
+			add_next_index_long(piece, pieces[i].data() - subject_piece.data());
 		} else {
-			std::string name = iter->second;
-			add_assoc_stringl_ex(matches, (const char *)name.c_str(), name.length() + 1, (char *)str->c_str(), pieces[i].size(), 1);
+			ZVAL_STRINGL(piece, str->c_str(), pieces[i].size(), 1);
 		}
+
+		std::map<int, std::string>::const_iterator iter = named_groups.find(i);
+		if (iter != named_groups.end()) {
+			std::string name = iter->second;
+			add_assoc_zval_ex(matches, (const char *)name.c_str(), name.length() + 1, piece);
+		}
+		add_next_index_zval(matches, piece);
+
+		piece = NULL;
 	}
 }
 /*	}}} */
@@ -290,7 +301,7 @@ PHP_FUNCTION(re2_match)
 			}
 
 			array_init_size(matches, argc);
-			_php_re2_populate_matches(re2, matches, pieces, argc);
+			_php_re2_populate_matches(re2, matches, subject_piece, pieces, argc, flags);
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
@@ -305,25 +316,29 @@ PHP_FUNCTION(re2_match)
 }
 /*	}}} */
 
-/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches [, int $offset = 0])
+/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches [, int flags [, int $offset = 0]])
 	Returns how many times the pattern matched the subject. */
 PHP_FUNCTION(re2_match_all)
 {
 	char *subject;
 	re2::StringPiece subject_piece;
 	int subject_len, argc, start_pos = 0, end_pos, num_matches = 0;
-	long offset;
+	long flags, offset;
 	zval *pattern = NULL, *matches = NULL, *piece_matches = NULL;
 	bool was_empty = false;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zsz|l", &pattern, &subject, &subject_len, &matches, &offset) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zsz|ll", &pattern, &subject, &subject_len, &matches, &flags, &offset) == FAILURE) {
 		RETURN_FALSE;
 	}
 
 	RE2_GET_PATTERN;
 
 	if (ZEND_NUM_ARGS() < 4) {
+		flags = 0;
+	}
+
+	if (ZEND_NUM_ARGS() < 5) {
 		offset = 0;
 	}
 	start_pos = offset;
@@ -350,7 +365,7 @@ PHP_FUNCTION(re2_match_all)
 
 		MAKE_STD_ZVAL(piece_matches);
 		array_init_size(piece_matches, argc);
-		_php_re2_populate_matches(re2, piece_matches, pieces, argc);
+		_php_re2_populate_matches(re2, piece_matches, subject_piece, pieces, argc, flags);
 		add_next_index_zval(matches, piece_matches);
 		piece_matches = NULL;
 
@@ -752,6 +767,7 @@ PHP_MINIT_FUNCTION(re2)
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_START", RE2_ANCHOR_START, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_BOTH", RE2_ANCHOR_BOTH, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_GREP_INVERT", RE2_GREP_INVERT, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_OFFSET_CAPTURE", RE2_OFFSET_CAPTURE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_REPLACE_GLOBAL", RE2_REPLACE_GLOBAL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_REPLACE_FIRST", RE2_REPLACE_FIRST, CONST_CS | CONST_PERSISTENT);
 

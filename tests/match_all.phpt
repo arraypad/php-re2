@@ -11,7 +11,10 @@ echo "*** Testing re2_match_all(): 3 subpatterns\n";
 var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches), $matches);
 
 echo "*** Testing re2_match_all(): offset\n";
-var_dump(re2_match_all('Hello \w+ world', $subject, $matches, 17), $matches);
+var_dump(re2_match_all('Hello \w+ world', $subject, $matches, 0, 17), $matches);
+
+echo "*** Testing re2_match_all(): offset capture\n";
+var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTURE), $matches);
 ?>
 --EXPECTF--
 *** Testing re2_match_all(): 1 subpattern
@@ -88,5 +91,60 @@ array(2) {
   array(1) {
     [0]=>
     string(15) "Hello cpp world"
+  }
+}
+*** Testing re2_match_all(): offset capture
+int(3)
+array(3) {
+  [0]=>
+  array(2) {
+    [0]=>
+    array(2) {
+      [0]=>
+      string(17) "Hello regex world"
+      [1]=>
+      int(0)
+    }
+    [1]=>
+    array(2) {
+      [0]=>
+      string(5) "regex"
+      [1]=>
+      int(6)
+    }
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    array(2) {
+      [0]=>
+      string(15) "Hello php world"
+      [1]=>
+      int(18)
+    }
+    [1]=>
+    array(2) {
+      [0]=>
+      string(3) "php"
+      [1]=>
+      int(24)
+    }
+  }
+  [2]=>
+  array(2) {
+    [0]=>
+    array(2) {
+      [0]=>
+      string(15) "Hello cpp world"
+      [1]=>
+      int(34)
+    }
+    [1]=>
+    array(2) {
+      [0]=>
+      string(3) "cpp"
+      [1]=>
+      int(40)
+    }
   }
 }
