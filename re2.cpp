@@ -244,7 +244,7 @@ static void _php_re2_populate_matches(RE2 *re2, zval *matches, re2::StringPiece 
 		if (flags & RE2_OFFSET_CAPTURE) {
 			array_init_size(piece, 2);
 			add_next_index_stringl(piece, str->c_str(), pieces[i].size(), 1);
-			add_next_index_long(piece, pieces[i].data() - subject_piece.data());
+			add_next_index_long(piece, pieces[i].data() == NULL ? -1 : pieces[i].data() - subject_piece.data());
 		} else {
 			ZVAL_STRINGL(piece, str->c_str(), pieces[i].size(), 1);
 		}

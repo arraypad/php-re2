@@ -51,6 +51,12 @@ var_dump(re2_match('Hello (\w+) world', 'Hello regex world', $matches, RE2_OFFSE
 echo "*** Testing re2_match(): named groups & offset capture\n";
 var_dump(re2_match('(?P<foo>Hello) (\w+) (?P<bar>.*)', 'Hello regex world', $matches, RE2_OFFSET_CAPTURE), $matches);
 
+echo "*** Testing re2_match(): absent subpattern\n";
+var_dump(re2_match('(foo)|(bar)baz', 'barbazbla', $matches), $matches);
+
+echo "*** Testing re2_match(): absent subpattern, zero width subpattern & offset capture\n";
+var_dump(re2_match('(foo)|(bar)(z*)baz', 'barbazbla', $matches, RE2_OFFSET_CAPTURE), $matches);
+
 ?>
 --EXPECTF--
 *** Testing re2_match(): no subpatterns, positive (default) unanchored match
@@ -193,5 +199,47 @@ array(6) {
     string(5) "world"
     [1]=>
     int(12)
+  }
+}
+*** Testing re2_match(): absent subpattern
+bool(true)
+array(3) {
+  [0]=>
+  string(6) "barbaz"
+  [1]=>
+  string(0) ""
+  [2]=>
+  string(3) "bar"
+}
+*** Testing re2_match(): absent subpattern, zero width subpattern & offset capture
+bool(true)
+array(4) {
+  [0]=>
+  array(2) {
+    [0]=>
+    string(6) "barbaz"
+    [1]=>
+    int(0)
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    string(0) ""
+    [1]=>
+    int(-1)
+  }
+  [2]=>
+  array(2) {
+    [0]=>
+    string(3) "bar"
+    [1]=>
+    int(0)
+  }
+  [3]=>
+  array(2) {
+    [0]=>
+    string(0) ""
+    [1]=>
+    int(3)
   }
 }
