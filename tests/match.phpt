@@ -30,6 +30,9 @@ var_dump(re2_match('\w+ world', 'Hello regex world', $matches, RE2_ANCHOR_START)
 echo "*** Testing re2_match(): subpattern used but no matches arguments passed\n";
 var_dump(re2_match('Hello (\w+) world', 'Hello regex world'));
 
+echo "*** Testing re2_match(): offset\n";
+var_dump(re2_match('\w+', 'Hello regex world', $matches, RE2_ANCHOR_NONE, 5), $matches);
+
 echo "*** Testing re2_match(): 1 subpattern\n";
 var_dump(re2_match('Hello (\w+) world', 'Hello regex world', $matches), $matches);
 
@@ -59,6 +62,12 @@ bool(true)
 bool(false)
 *** Testing re2_match(): subpattern used but no matches arguments passed
 bool(true)
+*** Testing re2_match(): offset
+bool(true)
+array(1) {
+  [0]=>
+  string(5) "regex"
+}
 *** Testing re2_match(): 1 subpattern
 bool(true)
 array(2) {

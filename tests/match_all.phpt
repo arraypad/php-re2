@@ -10,6 +10,8 @@ var_dump(re2_match_all('Hello (\w+) world', $subject, $matches), $matches);
 echo "*** Testing re2_match_all(): 3 subpatterns\n";
 var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches), $matches);
 
+echo "*** Testing re2_match_all(): offset\n";
+var_dump(re2_match_all('Hello \w+ world', $subject, $matches, 17), $matches);
 ?>
 --EXPECTF--
 *** Testing re2_match_all(): 1 subpattern
@@ -72,5 +74,19 @@ array(3) {
     string(3) "cpp"
     [3]=>
     string(5) "world"
+  }
+}
+*** Testing re2_match_all(): offset
+int(2)
+array(2) {
+  [0]=>
+  array(1) {
+    [0]=>
+    string(15) "Hello php world"
+  }
+  [1]=>
+  array(1) {
+    [0]=>
+    string(15) "Hello cpp world"
   }
 }

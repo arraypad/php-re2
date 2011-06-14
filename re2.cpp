@@ -250,7 +250,7 @@ static void _php_re2_populate_matches(RE2 *re2, zval *matches, re2::StringPiece 
 }
 /*	}}} */
 
-/*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE]])
+/*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE [, int $offset = 0]]])
 	Returns whether the pattern matches the subject.
 */
 PHP_FUNCTION(re2_match)
@@ -258,12 +258,12 @@ PHP_FUNCTION(re2_match)
 	char *subject;
 	re2::StringPiece subject_piece;
 	int subject_len, argc;
-	long flags;
+	long flags, offset;
 	zval *pattern = NULL, *matches = NULL;
 	RE2 *re2;
 	RE2::Anchor anchor;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|zl", &pattern, &subject, &subject_len, &matches, &flags) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|zll", &pattern, &subject, &subject_len, &matches, &flags, &offset) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -274,13 +274,17 @@ PHP_FUNCTION(re2_match)
 		flags = RE2_ANCHOR_NONE;
 	}
 
+	if (ZEND_NUM_ARGS() < 5) {
+		offset = 0;
+	}
+
 	subject_piece = re2::StringPiece(subject);
 	anchor = _php_re2_get_anchor_from_flags(flags);
 
 	if (ZEND_NUM_ARGS() > 2) {
 		re2::StringPiece pieces[++argc];
 
-		if (re2->Match(subject_piece, 0, subject_piece.size(), anchor, pieces, argc)) {
+		if (re2->Match(subject_piece, offset, subject_piece.size(), anchor, pieces, argc)) {
 			if (matches != NULL) {
 				zval_dtor(matches);
 			}
@@ -292,7 +296,7 @@ PHP_FUNCTION(re2_match)
 			RETURN_FALSE;
 		}
 	} else {
-		if (re2->Match(subject_piece, 0, subject_piece.size(), anchor, NULL, 0)) {
+		if (re2->Match(subject_piece, offset, subject_piece.size(), anchor, NULL, 0)) {
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
@@ -301,22 +305,28 @@ PHP_FUNCTION(re2_match)
 }
 /*	}}} */
 
-/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches)
+/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches [, int $offset = 0])
 	Returns how many times the pattern matched the subject. */
 PHP_FUNCTION(re2_match_all)
 {
 	char *subject;
 	re2::StringPiece subject_piece;
 	int subject_len, argc, start_pos = 0, end_pos, num_matches = 0;
+	long offset;
 	zval *pattern = NULL, *matches = NULL, *piece_matches = NULL;
 	bool was_empty = false;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zsz", &pattern, &subject, &subject_len, &matches) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zsz|l", &pattern, &subject, &subject_len, &matches, &offset) == FAILURE) {
 		RETURN_FALSE;
 	}
 
 	RE2_GET_PATTERN;
+
+	if (ZEND_NUM_ARGS() < 4) {
+		offset = 0;
+	}
+	start_pos = offset;
 
 	subject_piece = re2::StringPiece(subject);
 	end_pos = subject_piece.size();
