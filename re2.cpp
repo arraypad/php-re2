@@ -210,7 +210,6 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 #define RE2_MATCH_PARTIAL	1
 #define RE2_MATCH_FULL		2
 #define RE2_GREP_INVERT		4
-
 #define RE2_REPLACE_GLOBAL	1
 #define RE2_REPLACE_FIRST   2
 /* }}} */
