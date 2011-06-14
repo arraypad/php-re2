@@ -13,7 +13,7 @@ var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, 3, $matches), $matches);
 ?>
 --EXPECTF--
 *** Testing re2_match_all(): 1 subpattern
-bool(true)
+int(3)
 array(3) {
   [0]=>
   array(1) {
@@ -32,7 +32,7 @@ array(3) {
   }
 }
 *** Testing re2_match_all(): 3 subpatterns
-bool(true)
+int(3)
 array(3) {
   [0]=>
   array(3) {

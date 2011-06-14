@@ -287,10 +287,10 @@ PHP_FUNCTION(re2_match_all)
 	char *subject;
 	std::string subject_str;
 	re2::StringPiece subject_piece;
-	int subject_len, i;
+	int subject_len, i, num_matches = 0;
 	long argc;
 	zval *pattern = NULL, *matches = NULL, *piece_matches = NULL;
-	bool did_match = false, was_empty = false;
+	bool was_empty = false;
 	RE2 *re2;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zslz", &pattern, &subject, &subject_len, &argc, &matches) == FAILURE) {
@@ -312,12 +312,11 @@ PHP_FUNCTION(re2_match_all)
 	}
 
 	while (RE2::FindAndConsumeN(&subject_piece, *re2, args, argc)) {
-		if (!did_match) {
+		if (!num_matches++) {
 			if (matches != NULL) {
 				zval_dtor(matches);
 			}
 			array_init(matches);
-			did_match = true;
 		}
 
 		if (subject_piece.empty()) {
@@ -336,11 +335,7 @@ PHP_FUNCTION(re2_match_all)
 		piece_matches = NULL;
 	}
 
-	if (did_match) {
-		RETURN_TRUE;
-	} else {
-		RETURN_FALSE;
-	}
+	RETVAL_LONG(num_matches);
 }
 /* }}} */
 

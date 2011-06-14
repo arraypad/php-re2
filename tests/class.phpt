@@ -28,7 +28,7 @@ array(1) {
   string(5) "regex"
 }
 *** Testing RE2 class: match_all
-bool(true)
+int(2)
 array(2) {
   [0]=>
   array(1) {
