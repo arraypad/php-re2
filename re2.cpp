@@ -204,6 +204,20 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 #define RE2_REPLACE_FIRST   2
 /* }}} */
 
+static void populate_matches(RE2 *re2, zval *matches, std::string *str, int argc)
+{
+	const std::map<int, std::string> named_groups = re2->CapturingGroupNames();
+	for (int i = 0; i < argc; i++) {
+		std::map<int, std::string>::const_iterator iter = named_groups.find(i + 1);
+		if (iter == named_groups.end()) {
+			add_next_index_string(matches, str[i].c_str(), 1);
+		} else {
+			std::string name = iter->second;
+			add_assoc_string_ex(matches, (const char *)name.c_str(), name.length() + 1, (char *)str[i].c_str(), 1);
+		}
+	}
+}
+
 /* {{{ PHP_FUNCTION(re2_match) */
 PHP_FUNCTION(re2_match)
 {
@@ -251,9 +265,7 @@ PHP_FUNCTION(re2_match)
 			}
 
 			array_init_size(matches, argc);
-			for (i = 0; i < argc; i++) {
-				add_next_index_string(matches, str[i].c_str(), 1);
-			}
+			populate_matches(re2, matches, str, argc);
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
@@ -319,9 +331,7 @@ PHP_FUNCTION(re2_match_all)
 
 		MAKE_STD_ZVAL(piece_matches);
 		array_init_size(piece_matches, argc);
-		for (i = 0; i < argc; i++) {
-			add_next_index_string(piece_matches, str[i].c_str(), 1);
-		}
+		populate_matches(re2, piece_matches, str, argc);
 		add_next_index_zval(matches, piece_matches);
 		piece_matches = NULL;
 	}

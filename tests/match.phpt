@@ -36,6 +36,9 @@ var_dump(re2_match('Hello (\w+) world', 'Hello regex world', 1, $matches), $matc
 echo "*** Testing re2_match(): 3 subpatterns\n";
 var_dump(re2_match('(Hello) (\w+) (.*)', 'Hello regex world', 3, $matches), $matches);
 
+echo "*** Testing re2_match(): named groups\n";
+var_dump(re2_match('(?P<foo>Hello) (\w+) (?P<bar>.*)', 'Hello regex world', 3, $matches), $matches);
+
 ?>
 --EXPECTF--
 *** Testing re2_match(): no subpatterns, positive (default) partial match
@@ -72,5 +75,15 @@ array(3) {
   [1]=>
   string(5) "regex"
   [2]=>
+  string(5) "world"
+}
+*** Testing re2_match(): named groups
+bool(true)
+array(3) {
+  ["foo"]=>
+  string(5) "Hello"
+  [0]=>
+  string(5) "regex"
+  ["bar"]=>
   string(5) "world"
 }
