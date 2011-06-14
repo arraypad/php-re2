@@ -52,8 +52,11 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_replace, 0, 0, 3)
 	ZEND_ARG_INFO(0, flags)
 	ZEND_ARG_INFO(1, count)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_compile, 0, 0, 1)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, pattern)
+	ZEND_ARG_INFO(0, options)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_one_arg, 0, 0, 1)
 ZEND_END_ARG_INFO()
 /* }}} */
 
@@ -68,18 +71,50 @@ const zend_function_entry re2_functions[] = {
 };
 /* }}} */
 
-/* {{{ RE2 class */
+/* {{{ RE2 classes */
 zend_class_entry *php_re2_class_entry;
 #define PHP_RE2_CLASS_NAME "RE2"
 
 static zend_function_entry re2_class_functions[] = {
-	PHP_ME(RE2, __construct, arginfo_re2_compile, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(RE2, __construct, arginfo_re2_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(RE2, getOptions, NULL, ZEND_ACC_PUBLIC)
+	{NULL, NULL, NULL}
+};
+
+zend_class_entry *php_re2_options_class_entry;
+#define PHP_RE2_OPTIONS_CLASS_NAME "RE2_Options"
+
+static zend_function_entry re2_options_class_functions[] = {
+	PHP_ME(RE2_Options, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(RE2_Options, getEncoding, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getMaxMem, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getPosixSyntax, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getLongestMatch, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getLogErrors, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getLiteral, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getNeverNl, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getCaseSensitive, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getPerlClasses, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getWordBoundary, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getOneLine, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setEncoding, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setMaxMem, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setPosixSyntax, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setLongestMatch, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setLogErrors, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setLiteral, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setNeverNl, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setCaseSensitive, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setPerlClasses, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setWordBoundary, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, setOneLine, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 /* }}} */
 
 /* {{{ RE2 object handlers */
 zend_object_handlers re2_object_handlers;
+zend_object_handlers re2_options_object_handlers;
 
 struct re2_object {
 	zend_object std;
@@ -112,6 +147,40 @@ zend_object_value re2_create_handler(zend_class_entry *type TSRMLS_DC)
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &re2_object_handlers;
+	return retval;
+}
+
+struct re2_options_object {
+	zend_object std;
+	RE2::Options *options;
+};
+
+void re2_options_free_storage(void *object TSRMLS_DC)
+{
+	re2_options_object *obj = (re2_options_object *)object;
+	delete obj->options;
+
+	zend_hash_destroy(obj->std.properties);
+	FREE_HASHTABLE(obj->std.properties);
+
+	efree(obj);
+}
+
+zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
+{
+	zval *tmp;
+	zend_object_value retval;
+
+	re2_options_object *obj = (re2_options_object *)emalloc(sizeof(re2_options_object));
+	memset(obj, 0, sizeof(re2_options_object));
+	obj->std.ce = type;
+
+	ALLOC_HASHTABLE(obj->std.properties);
+	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
+
+	retval.handle = zend_objects_store_put(obj, NULL, re2_options_free_storage, NULL TSRMLS_CC);
+	retval.handlers = &re2_options_object_handlers;
 	return retval;
 }
 /* }}} */
@@ -320,15 +389,128 @@ PHP_METHOD(RE2, __construct)
 {
 	char *pattern;
 	int pattern_len;
+	zval *options;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pattern, &pattern_len) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|O", &pattern, &pattern_len, &options, php_re2_options_class_entry) == FAILURE) {
 		RETURN_NULL();
 	}
 
-	RE2 *re2_obj = new RE2(pattern);
+	if (ZEND_NUM_ARGS() == 1) {
+		zval *ctor, unused;
+
+		/* create options */
+		MAKE_STD_ZVAL(options);
+		Z_TYPE_P(options) = IS_OBJECT;
+		object_init_ex(options, php_re2_options_class_entry);
+
+		MAKE_STD_ZVAL(ctor);
+		array_init_size(ctor, 2);
+		Z_ADDREF_P(options);
+		add_next_index_zval(ctor, options);
+		add_next_index_string(ctor, "__construct", 1);
+		if (call_user_function(&php_re2_options_class_entry->function_table, &options, ctor, &unused, 0, NULL TSRMLS_CC) == FAILURE) {
+			php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to construct RE2_Options");
+			RETURN_NULL();
+		}
+		zval_ptr_dtor(&ctor);
+		Z_DELREF_P(options);
+	}
+
+	zend_update_property(php_re2_class_entry, getThis(), "options", strlen("options"), options TSRMLS_CC);
+
+	/* create re2 object */
+	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
+	RE2 *re2_obj = new RE2(pattern, *options_obj->options);
 	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->re2 = re2_obj;
 }
+/* }}} */
+
+/* {{{ RE2 options */
+
+PHP_METHOD(RE2, getOptions)
+{
+	zval *options = zend_read_property(php_re2_class_entry, getThis(), "options", strlen("options"), 0 TSRMLS_CC);
+	Z_ADDREF_P(options);
+	RETURN_ZVAL(options, 1, 0);
+}
+
+PHP_METHOD(RE2_Options, __construct)
+{
+	RE2::Options *options_obj = new RE2::Options();
+	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj->options = options_obj;
+}
+
+PHP_METHOD(RE2_Options, getEncoding)
+{
+	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	RETURN_STRING(obj->options->encoding() == RE2::Options::EncodingUTF8 ? "utf8" : "latin1", 1);
+}
+
+PHP_METHOD(RE2_Options, setEncoding)
+{
+	char *encoding;
+	int encoding_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &encoding, &encoding_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj->options->set_encoding(encoding_len == 4 ? RE2::Options::EncodingUTF8 : RE2::Options::EncodingLatin1);
+}
+
+PHP_METHOD(RE2_Options, getMaxMem)
+{
+	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	RETURN_LONG(obj->options->max_mem());
+}
+
+PHP_METHOD(RE2_Options, setMaxMem)
+{
+	long max_mem;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "l", &max_mem) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj->options->set_max_mem(max_mem);
+}
+
+#define RE2_OPTION_BOOL_GETTER(name, re2name) \
+	PHP_METHOD(RE2_Options, get##name) \
+	{ \
+		re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC); \
+		RETURN_BOOL(obj->options->re2name()); \
+	}
+
+#define RE2_OPTION_BOOL_SETTER(name, re2name) \
+	PHP_METHOD(RE2_Options, set##name) \
+	{ \
+		zend_bool value; \
+		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "b", &value) == FAILURE) { \
+			RETURN_FALSE; \
+		} \
+		re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC); \
+		obj->options->set_##re2name(value); \
+	}
+
+#define RE2_OPTION_BOOL(name, re2name) \
+	RE2_OPTION_BOOL_GETTER(name, re2name); \
+	RE2_OPTION_BOOL_SETTER(name, re2name);
+
+RE2_OPTION_BOOL(PosixSyntax, posix_syntax);
+RE2_OPTION_BOOL(LongestMatch, longest_match);
+RE2_OPTION_BOOL(LogErrors, log_errors);
+RE2_OPTION_BOOL(Literal, literal);
+RE2_OPTION_BOOL(NeverNl, never_nl);
+RE2_OPTION_BOOL(CaseSensitive, case_sensitive);
+RE2_OPTION_BOOL(PerlClasses, perl_classes);
+RE2_OPTION_BOOL(WordBoundary, word_boundary);
+RE2_OPTION_BOOL(OneLine, one_line);
+
 /* }}} */
 
 /* {{{ re2_module_entry
@@ -361,13 +543,21 @@ ZEND_GET_MODULE(re2)
  */
 PHP_MINIT_FUNCTION(re2)
 {
-	/* register class */
+	/* register RE2 class */
 	zend_class_entry ce;
 	INIT_CLASS_ENTRY(ce, PHP_RE2_CLASS_NAME, re2_class_functions);
 	php_re2_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	zend_declare_property_null(php_re2_class_entry, "options", strlen("options"), ZEND_ACC_PROTECTED TSRMLS_CC);
 	php_re2_class_entry->create_object = re2_create_handler;
 	memcpy(&re2_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	re2_object_handlers.clone_obj = NULL;
+
+	/* register RE2_Options class */
+	INIT_CLASS_ENTRY(ce, PHP_RE2_OPTIONS_CLASS_NAME, re2_options_class_functions);
+	php_re2_options_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	php_re2_options_class_entry->create_object = re2_options_create_handler;
+	memcpy(&re2_options_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	re2_options_object_handlers.clone_obj = NULL;
 
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_MATCH_FULL", RE2_MATCH_FULL, CONST_CS | CONST_PERSISTENT);

@@ -46,6 +46,33 @@ PHP_FUNCTION(re2_replace);
 PHP_FUNCTION(re2_quote);
 
 PHP_METHOD(RE2, __construct);
+PHP_METHOD(RE2, getOptions);
+
+PHP_METHOD(RE2_Options, __construct);
+PHP_METHOD(RE2_Options, getEncoding);
+PHP_METHOD(RE2_Options, getMaxMem);
+PHP_METHOD(RE2_Options, getPosixSyntax);
+PHP_METHOD(RE2_Options, getLongestMatch);
+PHP_METHOD(RE2_Options, getLogErrors);
+PHP_METHOD(RE2_Options, getLiteral);
+PHP_METHOD(RE2_Options, getNeverNl);
+PHP_METHOD(RE2_Options, getCaseSensitive);
+PHP_METHOD(RE2_Options, getPerlClasses);
+PHP_METHOD(RE2_Options, getWordBoundary);
+PHP_METHOD(RE2_Options, getOneLine);
+PHP_METHOD(RE2_Options, getOneLine);
+PHP_METHOD(RE2_Options, setEncoding);
+PHP_METHOD(RE2_Options, setMaxMem);
+PHP_METHOD(RE2_Options, setPosixSyntax);
+PHP_METHOD(RE2_Options, setLongestMatch);
+PHP_METHOD(RE2_Options, setLogErrors);
+PHP_METHOD(RE2_Options, setLiteral);
+PHP_METHOD(RE2_Options, setNeverNl);
+PHP_METHOD(RE2_Options, setCaseSensitive);
+PHP_METHOD(RE2_Options, setPerlClasses);
+PHP_METHOD(RE2_Options, setWordBoundary);
+PHP_METHOD(RE2_Options, setOneLine);
+PHP_METHOD(RE2_Options, setOneLine);
 
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);
