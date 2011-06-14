@@ -213,10 +213,10 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 
 #define RE2_REPLACE_GLOBAL	1
 #define RE2_REPLACE_FIRST   2
-
 /* }}} */
 
-static void populate_matches(RE2 *re2, zval *matches, std::string *str, int argc)
+/*	{{{ */
+static void _php_re2_populate_matches(RE2 *re2, zval *matches, std::string *str, int argc)
 {
 	const std::map<int, std::string> named_groups = re2->CapturingGroupNames();
 	for (int i = 0; i < argc; i++) {
@@ -229,8 +229,11 @@ static void populate_matches(RE2 *re2, zval *matches, std::string *str, int argc
 		}
 	}
 }
+/*	}}} */
 
-/* {{{ PHP_FUNCTION(re2_match) */
+/*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_MATCH_PARTIAL]])
+	Returns whether the pattern matches the subject.
+*/
 PHP_FUNCTION(re2_match)
 {
 	char *subject;
@@ -272,7 +275,7 @@ PHP_FUNCTION(re2_match)
 			}
 
 			array_init_size(matches, argc);
-			populate_matches(re2, matches, str, argc);
+			_php_re2_populate_matches(re2, matches, str, argc);
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
@@ -286,9 +289,10 @@ PHP_FUNCTION(re2_match)
 		}
 	}
 }
-/* }}} */
+/*	}}} */
 
-/* {{{ PHP_FUNCTION(re2_match_all) */
+/*	{{{ proto int re2_match_all(mixed $pattern, string $subject, array &$matches)
+	Returns how many times the pattern matched the subject. */
 PHP_FUNCTION(re2_match_all)
 {
 	char *subject;
@@ -336,16 +340,17 @@ PHP_FUNCTION(re2_match_all)
 
 		MAKE_STD_ZVAL(piece_matches);
 		array_init_size(piece_matches, argc);
-		populate_matches(re2, piece_matches, str, argc);
+		_php_re2_populate_matches(re2, piece_matches, str, argc);
 		add_next_index_zval(matches, piece_matches);
 		piece_matches = NULL;
 	}
 
 	RETVAL_LONG(num_matches);
 }
-/* }}} */
+/*	}}} */
 
-/* {{{ PHP_FUNCTION(re2_replace) */
+/*	{{{ proto string re2_replace(mixed $pattern, string $replacement, string $subject [, int $flags = RE2_REPLACE_GLOBAL [, int &$count]])
+	Replaces all matches of the pattern with the replacement. */
 PHP_FUNCTION(re2_replace)
 {
 	char *subject, *replace;
@@ -376,9 +381,10 @@ PHP_FUNCTION(re2_replace)
 
 	RETVAL_STRINGL(subject_str.c_str(), subject_str.length(), 1);
 }
-/* }}} */
+/*	}}} */
 
-/* {{{ PHP_FUNCTION(re2_grep) */
+/*	{{{ proto array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_MATCH_PARTIAL])
+	Return array entries which match the pattern (or which don't, with RE2_GREP_INVERT.) */
 PHP_FUNCTION(re2_grep)
 {
 	int argc;
@@ -435,9 +441,10 @@ PHP_FUNCTION(re2_grep)
 	}
 	zend_hash_internal_pointer_reset(Z_ARRVAL_P(input));
 }
-/* }}} */
+/*	}}} */
 
-/* {{{ PHP_FUNCTION(re2_quote) */
+/*	{{{	proto string re2_quote(string $subject)
+	Escapes all potentially meaningful regexp characters in the subject. */
 PHP_FUNCTION(re2_quote)
 {
 	char *subject;
@@ -452,9 +459,10 @@ PHP_FUNCTION(re2_quote)
 	out_str = RE2::QuoteMeta(subject);
 	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
 }
-/* }}} */
+/*	}}} */
 
-/* {{{ PHP_METHOD(RE2, __construct) */
+/*	{{{ proto RE2 RE2::__construct(string $pattern [, RE2_Options $options])
+	Construct a new RE2 object from the given pattern. */
 PHP_METHOD(RE2, __construct)
 {
 	char *pattern;
@@ -494,30 +502,41 @@ PHP_METHOD(RE2, __construct)
 	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->re2 = re2_obj;
 }
-/* }}} */
+/*	}}} */
 
 /* {{{ RE2 options */
 
+/*	{{{ proto RE2_Options RE2::getOptions()
+	Returns the RE2_Options for this instance. */
 PHP_METHOD(RE2, getOptions)
 {
 	zval *options = zend_read_property(php_re2_class_entry, getThis(), "options", strlen("options"), 0 TSRMLS_CC);
 	Z_ADDREF_P(options);
 	RETURN_ZVAL(options, 1, 0);
 }
+/*	}}} */
 
+/*	{{{ proto RE2_Options RE2::__construct()
+	Constructs a new RE2_Options object. */
 PHP_METHOD(RE2_Options, __construct)
 {
 	RE2::Options *options_obj = new RE2::Options();
 	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->options = options_obj;
 }
+/*	}}} */
 
+/*	{{{ proto string RE2_Options::getEncoding()
+	Returns the encoding to use for the pattern and subject strings, "utf8" or "latin1". */
 PHP_METHOD(RE2_Options, getEncoding)
 {
 	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	RETURN_STRING(obj->options->encoding() == RE2::Options::EncodingUTF8 ? "utf8" : "latin1", 1);
 }
+/*	}}} */
 
+/*	{{{ proto void RE2_Options::setEncoding(string $encoding)
+	Sets the encoding to use for the pattern and subject strings, "utf8" or "latin1". */
 PHP_METHOD(RE2_Options, setEncoding)
 {
 	char *encoding;
@@ -530,13 +549,19 @@ PHP_METHOD(RE2_Options, setEncoding)
 	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->options->set_encoding(encoding_len == 4 ? RE2::Options::EncodingUTF8 : RE2::Options::EncodingLatin1);
 }
+/* }}} */
 
+/*	{{{ proto int RE2_Options::getMaxMem()
+	Returns the (approximate) maximum amount of memory this RE2 should use, in bytes. */
 PHP_METHOD(RE2_Options, getMaxMem)
 {
 	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	RETURN_LONG(obj->options->max_mem());
 }
+/*	}}} */
 
+/*	{{{ proto void RE2_Options::setMaxMem(int $max_mem)
+	Set the (approximate) maximum amount of memory this RE2 should use, in bytes. */
 PHP_METHOD(RE2_Options, setMaxMem)
 {
 	long max_mem;
@@ -548,6 +573,7 @@ PHP_METHOD(RE2_Options, setMaxMem)
 	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->options->set_max_mem(max_mem);
 }
+/*	}}} */
 
 #define RE2_OPTION_BOOL_GETTER(name, re2name) \
 	PHP_METHOD(RE2_Options, get##name) \
@@ -567,19 +593,95 @@ PHP_METHOD(RE2_Options, setMaxMem)
 		obj->options->set_##re2name(value); \
 	}
 
-#define RE2_OPTION_BOOL(name, re2name) \
-	RE2_OPTION_BOOL_GETTER(name, re2name); \
-	RE2_OPTION_BOOL_SETTER(name, re2name);
+/*	{{{ proto bool RE2_Options::getPosixSyntax()
+	Returns whether patterns are restricted to POSIX egrep syntax. */
+RE2_OPTION_BOOL_GETTER(PosixSyntax, posix_syntax);
+/*	}}} */
 
-RE2_OPTION_BOOL(PosixSyntax, posix_syntax);
-RE2_OPTION_BOOL(LongestMatch, longest_match);
-RE2_OPTION_BOOL(LogErrors, log_errors);
-RE2_OPTION_BOOL(Literal, literal);
-RE2_OPTION_BOOL(NeverNl, never_nl);
-RE2_OPTION_BOOL(CaseSensitive, case_sensitive);
-RE2_OPTION_BOOL(PerlClasses, perl_classes);
-RE2_OPTION_BOOL(WordBoundary, word_boundary);
-RE2_OPTION_BOOL(OneLine, one_line);
+/*	{{{ proto void RE2_Options::setPosixSyntax(bool $value)
+	Sets whether patterns are restricted to POSIX egrep syntax. */
+RE2_OPTION_BOOL_SETTER(PosixSyntax, posix_syntax);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getLongestMatch()
+	Returns whether the pattern will search for the longest match instead of the first. */
+RE2_OPTION_BOOL_GETTER(LongestMatch, longest_match);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setLongestMatch(bool $value)
+	Sets whether the pattern will search for the longest match instead of the first. */
+RE2_OPTION_BOOL_SETTER(LongestMatch, longest_match);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getLogErrors()
+	Returns whether syntax and execution errors will be written to stderr. */
+RE2_OPTION_BOOL_GETTER(LogErrors, log_errors);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setLogErrors(bool $value)
+	Sets whether syntax and execution errors will be written to stderr. */
+RE2_OPTION_BOOL_SETTER(LogErrors, log_errors);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getLiteral()
+	Returns whether the pattern will be interpreted as a literal string instead of a regex. */
+RE2_OPTION_BOOL_GETTER(Literal, literal);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setLiteral(bool $value)
+	Sets whether the pattern will be interpreted as a literal string instead of a regex. */
+RE2_OPTION_BOOL_SETTER(Literal, literal);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getNeverNl()
+	Returns whether the newlines will be matched in the pattern. */
+RE2_OPTION_BOOL_GETTER(NeverNl, never_nl);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setNeverNl(bool $value)
+	Sets whether the newlines will be matched in the pattern. */
+RE2_OPTION_BOOL_SETTER(NeverNl, never_nl);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getCaseSensitive()
+	Returns whether the pattern will be interpreted as case sensitive. */
+RE2_OPTION_BOOL_GETTER(CaseSensitive, case_sensitive);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setCaseSensitive(bool $value)
+	Sets whether the pattern will be interpreted as case sensitive. */
+RE2_OPTION_BOOL_SETTER(CaseSensitive, case_sensitive);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getPerlClasses()
+	Returns whether Perl's "\d \s \w \D \S \W" classes are allowed in posix_syntax mode. */
+RE2_OPTION_BOOL_GETTER(PerlClasses, perl_classes);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setPerlClasses(bool $value)
+	Sets whether Perl's \d \s \w \D \S \W classes are allowed in posix_syntax mode. */
+RE2_OPTION_BOOL_SETTER(PerlClasses, perl_classes);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getWordBoundary()
+	Returns whether the \b and \B assertions are allowed in posix_syntax mode. */
+RE2_OPTION_BOOL_GETTER(WordBoundary, word_boundary);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setWordBoundary(bool $value)
+	Returns whether the \b and \B assertions are allowed in posix_syntax mode. */
+RE2_OPTION_BOOL_SETTER(WordBoundary, word_boundary);
+/*	}}} */
+
+/*	{{{ proto bool RE2_Options::getOneLine()
+	Returns whether ^ and $ only match the start and end of the subject in posix_syntax mode. */
+RE2_OPTION_BOOL_GETTER(OneLine, one_line);
+/*	}}} */
+
+/*	{{{ proto void RE2_Options::setOneLine(bool $value)
+	Returns whether ^ and $ only match the start and end of the subject in posix_syntax mode. */
+RE2_OPTION_BOOL_SETTER(OneLine, one_line);
+/*	}}} */
 
 /* }}} */
 
