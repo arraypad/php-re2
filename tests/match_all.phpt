@@ -5,10 +5,10 @@ re2 - re2_match_all
 
 echo "*** Testing re2_match_all(): 1 subpattern\n";
 $subject = 'Hello regex world Hello php world Hello cpp world';
-var_dump(re2_match_all('Hello (\w+) world', $subject, 1, $matches), $matches);
+var_dump(re2_match_all('Hello (\w+) world', $subject, $matches), $matches);
 
 echo "*** Testing re2_match_all(): 3 subpatterns\n";
-var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, 3, $matches), $matches);
+var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches), $matches);
 
 ?>
 --EXPECTF--

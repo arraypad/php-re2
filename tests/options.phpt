@@ -9,13 +9,13 @@ function testOption($option, $pattern, $subject, $argc = 0, $isPosix = false, $v
   $opts = new RE2_Options();
   if ($isPosix) $opts->setPosixSyntax(true);
   $opts->$func($values[0]);
-  var_dump(re2_match(new RE2($pattern, $opts), $subject, $argc, $matches));
+  var_dump(re2_match(new RE2($pattern, $opts), $subject, $matches));
   if ($argc) var_dump($matches);
 
   $opts = new RE2_Options();
   if ($isPosix) $opts->setPosixSyntax(true);
   $opts->$func($values[1]);
-  var_dump(re2_match(new RE2($pattern, $opts), $subject, $argc, $matches));
+  var_dump(re2_match(new RE2($pattern, $opts), $subject, $matches));
   if ($argc) var_dump($matches);
 }
 
@@ -56,7 +56,8 @@ testOption('OneLine', '^regex', "Hello\nregex world", 0, true);
 --EXPECTF--
 *** Testing RE2 option: encoding
 re2/re2.cc:%d: Error parsing '%s': invalid UTF-8
-re2/re2.cc:%d: Invalid RE2: invalid UTF-8
+
+Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 bool(true)
 *** Testing RE2 option: max_mem
@@ -67,7 +68,8 @@ bool(true)
 *** Testing RE2 option: posix_syntax
 bool(true)
 re2/re2.cc:%d: Error parsing '\w+': invalid escape sequence: \w
-re2/re2.cc:%d: Invalid RE2: invalid escape sequence: \w
+
+Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 *** Testing RE2 option: longest_match
 bool(true)
@@ -81,9 +83,12 @@ array(1) {
   string(1) "aaa"
 }
 *** Testing RE2 option: log_errors
+
+Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 re2/re2.cc:%d: Error parsing '\X': invalid escape sequence: \X
-re2/re2.cc:%d: Invalid RE2: invalid escape sequence: \X
+
+Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 *** Testing RE2 option: literal
 bool(true)
@@ -96,12 +101,14 @@ bool(true)
 bool(false)
 *** Testing RE2 option: perl_classes
 re2/re2.cc:%d: Error parsing '\w': invalid escape sequence: \w
-re2/re2.cc:%d: Invalid RE2: invalid escape sequence: \w
+
+Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 bool(true)
 *** Testing RE2 option: word_boundary
 re2/re2.cc:%d: Error parsing 'Hello\b': invalid escape sequence: \b
-re2/re2.cc:%d: Invalid RE2: invalid escape sequence: \b
+
+Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 bool(true)
 *** Testing RE2 option: one_line

@@ -16,13 +16,12 @@ The main differences are:
 
 * Pattern delimiters (the "/" in "/foo/") are not required.
 * The functions which accept a pattern will take either a string or an RE2 object for the pattern.
-* Whenever an array is passed to receive matched subpatterns, the preceding argument (`$argc`) must contain the number of subpatterns in the pattern.
 
-### bool re2_match(mixed $pattern, string $subject [, int $argc [, array &$matches [, int $flags = RE2_MATCH_PARTIAL ]]])
+### bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_MATCH_PARTIAL ]])
 
 Returns whether the pattern matches the subject.
 
-### int re2_match_all(mixed $pattern, string $subject, int $argc, array &$matches)
+### int re2_match_all(mixed $pattern, string $subject, array &$matches)
 
 Returns how many times the pattern matched the subject.
 

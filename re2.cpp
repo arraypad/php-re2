@@ -35,14 +35,12 @@ extern "C" {
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match, 0, 0, 2)
 	ZEND_ARG_INFO(0, pattern)
 	ZEND_ARG_INFO(0, subject)
-	ZEND_ARG_INFO(0, argc)
 	ZEND_ARG_INFO(1, matches)
 	ZEND_ARG_INFO(0, flags)
 ZEND_END_ARG_INFO()
-ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match_all, 0, 0, 4)
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match_all, 0, 0, 3)
 	ZEND_ARG_INFO(0, pattern)
 	ZEND_ARG_INFO(0, subject)
-	ZEND_ARG_INFO(0, argc)
 	ZEND_ARG_INFO(1, matches)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_replace, 0, 0, 3)
@@ -194,7 +192,13 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 	} else { \
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Pattern must be a string or an RE2 object"); \
 		RETURN_FALSE; \
-	}
+	} \
+	argc = re2->NumberOfCapturingGroups(); \
+	if (argc == -1) { \
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern"); \
+		RETURN_FALSE; \
+	} \
+
 
 /* {{{ constants */
 #define RE2_MATCH_PARTIAL	1
@@ -223,17 +227,12 @@ PHP_FUNCTION(re2_match)
 {
 	char *subject;
 	std::string subject_str;
-	int subject_len;
-	long argc, flags;
+	int subject_len, argc;
+	long flags;
 	zval *pattern = NULL, *matches = NULL;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|lzl", &pattern, &subject, &subject_len, &argc, &matches, &flags) == FAILURE) {
-		RETURN_FALSE;
-	}
-
-	if (ZEND_NUM_ARGS() == 3) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Number of subpatterns argument passed but no matches argument");
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|zl", &pattern, &subject, &subject_len, &matches, &flags) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -253,7 +252,7 @@ PHP_FUNCTION(re2_match)
 			args[i] = &argv[i];
 		}
 
-		if (ZEND_NUM_ARGS() == 5 && flags & RE2_MATCH_FULL) {
+		if (ZEND_NUM_ARGS() == 4 && flags & RE2_MATCH_FULL) {
 			match = RE2::FullMatchN(subject_str, *re2, args, argc);
 		} else {
 			match = RE2::PartialMatchN(subject_str, *re2, args, argc);
@@ -288,12 +287,12 @@ PHP_FUNCTION(re2_match_all)
 	std::string subject_str;
 	re2::StringPiece subject_piece;
 	int subject_len, i, num_matches = 0;
-	long argc;
+	int argc;
 	zval *pattern = NULL, *matches = NULL, *piece_matches = NULL;
 	bool was_empty = false;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zslz", &pattern, &subject, &subject_len, &argc, &matches) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zsz", &pattern, &subject, &subject_len, &matches) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -344,7 +343,7 @@ PHP_FUNCTION(re2_replace)
 {
 	char *subject, *replace;
 	std::string subject_str, pattern_str, replace_str;
-	int subject_len, replace_len, i;
+	int subject_len, replace_len, i, argc;
 	long count, flags;
 	zval *pattern, *count_zv, *out;
 	RE2 *re2;

@@ -7,10 +7,10 @@ $re2 = new RE2('Hello (\w+)');
 var_dump($re2);
 
 echo "*** Testing RE2 class: match\n";
-var_dump(re2_match($re2, 'Hello regex world', 1, $matches), $matches);
+var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
 echo "*** Testing RE2 class: match_all\n";
-var_dump(re2_match_all($re2, 'Hello regex Hello PHP', 1, $matches), $matches);
+var_dump(re2_match_all($re2, 'Hello regex Hello PHP', $matches), $matches);
 
 echo "*** Testing RE2 class: replace\n";
 var_dump(re2_replace($re2, 'Goodbye \1', 'Hello regex world'));
