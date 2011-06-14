@@ -50,6 +50,9 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_replace, 0, 0, 3)
 	ZEND_ARG_INFO(0, replace)
 	ZEND_ARG_INFO(1, count)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_compile, 0, 0, 1)
+	ZEND_ARG_INFO(0, pattern)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ re2_functions[]
@@ -63,21 +66,82 @@ const zend_function_entry re2_functions[] = {
 };
 /* }}} */
 
+/* {{{ RE2 class */
+zend_class_entry *php_re2_class_entry;
+#define PHP_RE2_CLASS_NAME "RE2"
+
+static zend_function_entry re2_class_functions[] = {
+	PHP_ME(RE2, __construct, arginfo_re2_compile, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	{NULL, NULL, NULL}
+};
+/* }}} */
+
+/* {{{ RE2 object handlers */
+zend_object_handlers re2_object_handlers;
+
+struct re2_object {
+	zend_object std;
+	RE2 *re2;
+};
+
+void re2_free_storage(void *object TSRMLS_DC)
+{
+	re2_object *obj = (re2_object *)object;
+	delete obj->re2;
+
+	zend_hash_destroy(obj->std.properties);
+	FREE_HASHTABLE(obj->std.properties);
+
+	efree(obj);
+}
+
+zend_object_value re2_create_handler(zend_class_entry *type TSRMLS_DC)
+{
+	zval *tmp;
+	zend_object_value retval;
+
+	re2_object *obj = (re2_object *)emalloc(sizeof(re2_object));
+	memset(obj, 0, sizeof(re2_object));
+	obj->std.ce = type;
+
+	ALLOC_HASHTABLE(obj->std.properties);
+	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
+
+	retval.handle = zend_objects_store_put(obj, NULL, re2_free_storage, NULL TSRMLS_CC);
+	retval.handlers = &re2_object_handlers;
+	return retval;
+}
+/* }}} */
+
+#define RE2_GET_PATTERN \
+	if (Z_TYPE_P(pattern) == IS_STRING) { \
+		re2 = new RE2(Z_STRVAL_P(pattern)); \
+	} else if (Z_TYPE_P(pattern) == IS_OBJECT && instanceof_function(Z_OBJCE_P(pattern), php_re2_class_entry TSRMLS_CC)) { \
+		re2_object *obj = (re2_object *)zend_object_store_get_object(pattern TSRMLS_CC); \
+		re2 = obj->re2; \
+	} else { \
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Pattern must be a string or an RE2 object"); \
+		RETURN_FALSE; \
+	}
+
 /* {{{ PHP_FUNCTION(re2_match) */
 PHP_FUNCTION(re2_match)
 {
-	char *subject, *pattern;
-	std::string subject_str, pattern_str;
-	int subject_len, pattern_len;
+	char *subject;
+	std::string subject_str;
+	int subject_len;
 	long argc;
-	zval *matches = NULL;
+	zval *pattern = NULL, *matches = NULL;
+	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|lz", &pattern, &pattern_len, &subject, &subject_len, &argc, &matches) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|lz", &pattern, &subject, &subject_len, &argc, &matches) == FAILURE) {
 		RETURN_FALSE;
 	}
 
+	RE2_GET_PATTERN;
+
 	subject_str = std::string(subject);
-	pattern_str = std::string(pattern);
 
 	if (ZEND_NUM_ARGS() > 2) {
 		int i;
@@ -90,7 +154,7 @@ PHP_FUNCTION(re2_match)
 			args[i] = &argv[i];
 		}
 
-		bool match = RE2::PartialMatchN(subject_str, pattern_str, args, argc);
+		bool match = RE2::PartialMatchN(subject_str, *re2, args, argc);
 
 		if (match) {
 			if (matches != NULL) {
@@ -106,7 +170,7 @@ PHP_FUNCTION(re2_match)
 			RETURN_FALSE;
 		}
 	} else {
-		bool match = RE2::PartialMatch(subject_str, pattern_str);
+		bool match = RE2::PartialMatch(subject_str, *re2);
 		if (match) {
 			RETURN_TRUE;
 		} else {
@@ -119,21 +183,23 @@ PHP_FUNCTION(re2_match)
 /* {{{ PHP_FUNCTION(re2_match_all) */
 PHP_FUNCTION(re2_match_all)
 {
-	char *subject, *pattern;
-	std::string subject_str, pattern_str;
+	char *subject;
+	std::string subject_str;
 	re2::StringPiece subject_piece;
-	int subject_len, pattern_len, i;
+	int subject_len, i;
 	long argc;
-	zval *matches = NULL, *piece_matches = NULL;
+	zval *pattern = NULL, *matches = NULL, *piece_matches = NULL;
 	bool did_match = false, was_empty = false;
+	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sslz", &pattern, &pattern_len, &subject, &subject_len, &argc, &matches) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zslz", &pattern, &subject, &subject_len, &argc, &matches) == FAILURE) {
 		RETURN_FALSE;
 	}
 
+	RE2_GET_PATTERN;
+
 	subject_str = std::string(subject);
 	subject_piece = re2::StringPiece(subject_str);
-	pattern_str = std::string(pattern);
 
 	std::string str[argc];
 	RE2::Arg argv[argc];
@@ -144,7 +210,7 @@ PHP_FUNCTION(re2_match_all)
 		args[i] = &argv[i];
 	}
 
-	while (RE2::FindAndConsumeN(&subject_piece, pattern_str, args, argc)) {
+	while (RE2::FindAndConsumeN(&subject_piece, *re2, args, argc)) {
 		if (!did_match) {
 			if (matches != NULL) {
 				zval_dtor(matches);
@@ -182,21 +248,23 @@ PHP_FUNCTION(re2_match_all)
 /* {{{ PHP_FUNCTION(re2_replace) */
 PHP_FUNCTION(re2_replace)
 {
-	char *subject, *pattern, *replace;
+	char *subject, *replace;
 	std::string subject_str, pattern_str, replace_str;
-	int subject_len, pattern_len, replace_len, i;
+	int subject_len, replace_len, i;
 	long count;
-	zval *count_zv, *out;
+	zval *pattern, *count_zv, *out;
+	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss|z", &pattern, &pattern_len, &replace, &replace_len, &subject, &subject_len, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zss|z", &pattern, &replace, &replace_len, &subject, &subject_len, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
+	RE2_GET_PATTERN;
+
 	subject_str = std::string(subject);
-	pattern_str = std::string(pattern);
 	replace_str = std::string(replace);
 
-	count = RE2::GlobalReplace(&subject_str, pattern_str, replace_str);
+	count = RE2::GlobalReplace(&subject_str, *re2, replace_str);
 
 	if (ZEND_NUM_ARGS() == 4) {
 		ZVAL_LONG(count_zv, count);
@@ -220,6 +288,22 @@ PHP_FUNCTION(re2_quote)
 	subject_str = std::string(subject);
 	out_str = RE2::QuoteMeta(subject);
 	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
+}
+/* }}} */
+
+/* {{{ PHP_METHOD(RE2, __construct) */
+PHP_METHOD(RE2, __construct)
+{
+	char *pattern;
+	int pattern_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pattern, &pattern_len) == FAILURE) {
+		RETURN_NULL();
+	}
+
+	RE2 *re2_obj = new RE2(pattern);
+	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj->re2 = re2_obj;
 }
 /* }}} */
 
@@ -253,6 +337,12 @@ ZEND_GET_MODULE(re2)
  */
 PHP_MINIT_FUNCTION(re2)
 {
+	zend_class_entry ce;
+	INIT_CLASS_ENTRY(ce, PHP_RE2_CLASS_NAME, re2_class_functions);
+	php_re2_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	php_re2_class_entry->create_object = re2_create_handler;
+	memcpy(&re2_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+	re2_object_handlers.clone_obj = NULL;
 	return SUCCESS;
 }
 /* }}} */

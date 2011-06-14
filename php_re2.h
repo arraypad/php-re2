@@ -45,6 +45,8 @@ PHP_FUNCTION(re2_match_all);
 PHP_FUNCTION(re2_replace);
 PHP_FUNCTION(re2_quote);
 
+PHP_METHOD(RE2, __construct);
+
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);
 PHP_RINIT_FUNCTION(re2);
