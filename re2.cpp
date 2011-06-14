@@ -44,6 +44,12 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match_all, 0, 0, 4)
 	ZEND_ARG_INFO(0, argc)
 	ZEND_ARG_INFO(1, matches)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_replace, 0, 0, 3)
+	ZEND_ARG_INFO(0, pattern)
+	ZEND_ARG_INFO(0, subject)
+	ZEND_ARG_INFO(0, replace)
+	ZEND_ARG_INFO(1, count)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ re2_functions[]
@@ -51,6 +57,7 @@ ZEND_END_ARG_INFO()
 const zend_function_entry re2_functions[] = {
 	PHP_FE(re2_match, arginfo_re2_match)
 	PHP_FE(re2_match_all, arginfo_re2_match_all)
+	PHP_FE(re2_replace, arginfo_re2_replace)
 	{NULL, NULL, NULL}
 };
 /* }}} */
@@ -168,6 +175,33 @@ PHP_FUNCTION(re2_match_all)
 	} else {
 		RETURN_FALSE;
 	}
+}
+/* }}} */
+
+/* {{{ PHP_FUNCTION(re2_replace) */
+PHP_FUNCTION(re2_replace)
+{
+	char *subject, *pattern, *replace;
+	std::string subject_str, pattern_str, replace_str;
+	int subject_len, pattern_len, replace_len, i;
+	long count;
+	zval *count_zv, *out;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sss|z", &pattern, &pattern_len, &replace, &replace_len, &subject, &subject_len, &count_zv) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	subject_str = std::string(subject);
+	pattern_str = std::string(pattern);
+	replace_str = std::string(replace);
+
+	count = RE2::GlobalReplace(&subject_str, pattern_str, replace_str);
+
+	if (ZEND_NUM_ARGS() == 4) {
+		ZVAL_LONG(count_zv, count);
+	}
+
+	RETVAL_STRINGL(subject_str.c_str(), subject_str.length(), 1);
 }
 /* }}} */
 
