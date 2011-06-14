@@ -207,40 +207,61 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 
 
 /* {{{ constants */
-#define RE2_MATCH_PARTIAL	1
-#define RE2_MATCH_FULL		2
+#define RE2_ANCHOR_NONE		0
+#define RE2_ANCHOR_START	1
+#define RE2_ANCHOR_BOTH		2
 #define RE2_GREP_INVERT		4
 #define RE2_REPLACE_GLOBAL	1
 #define RE2_REPLACE_FIRST   2
 /* }}} */
 
-/*	{{{ */
-static void _php_re2_populate_matches(RE2 *re2, zval *matches, std::string *str, int argc)
+/*	{{{ match helpers */
+
+static RE2::Anchor _php_re2_get_anchor_from_flags(int flags)
 {
+	if (flags & RE2_ANCHOR_BOTH) {
+		return RE2::ANCHOR_BOTH;
+	}
+
+	if (flags & RE2_ANCHOR_START) {
+		return RE2::ANCHOR_START;
+	}
+
+	return RE2::UNANCHORED;
+}
+
+static void _php_re2_populate_matches(RE2 *re2, zval *matches, re2::StringPiece *pieces, int argc)
+{
+	std::string *str;
 	const std::map<int, std::string> named_groups = re2->CapturingGroupNames();
-	for (int i = 0; i < argc; i++) {
-		std::map<int, std::string>::const_iterator iter = named_groups.find(i + 1);
+
+	str = &pieces[0].ToString();
+	add_next_index_stringl(matches, str->c_str(), pieces[0].size(), 1);
+	for (int i = 1; i < argc; i++) {
+		str = &pieces[i].ToString();
+		std::map<int, std::string>::const_iterator iter = named_groups.find(i);
 		if (iter == named_groups.end()) {
-			add_next_index_string(matches, str[i].c_str(), 1);
+			add_next_index_stringl(matches, str->c_str(), pieces[i].size(), 1);
 		} else {
 			std::string name = iter->second;
-			add_assoc_string_ex(matches, (const char *)name.c_str(), name.length() + 1, (char *)str[i].c_str(), 1);
+			add_assoc_stringl_ex(matches, (const char *)name.c_str(), name.length() + 1, (char *)str->c_str(), pieces[i].size(), 1);
 		}
 	}
 }
 /*	}}} */
 
-/*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_MATCH_PARTIAL]])
+/*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE]])
 	Returns whether the pattern matches the subject.
 */
 PHP_FUNCTION(re2_match)
 {
 	char *subject;
-	std::string subject_str;
+	re2::StringPiece subject_piece;
 	int subject_len, argc;
 	long flags;
 	zval *pattern = NULL, *matches = NULL;
 	RE2 *re2;
+	RE2::Anchor anchor;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|zl", &pattern, &subject, &subject_len, &matches, &flags) == FAILURE) {
 		RETURN_FALSE;
@@ -248,40 +269,30 @@ PHP_FUNCTION(re2_match)
 
 	RE2_GET_PATTERN;
 
-	subject_str = std::string(subject);
+	if (ZEND_NUM_ARGS() < 4) {
+		/* default flags */
+		flags = RE2_ANCHOR_NONE;
+	}
+
+	subject_piece = re2::StringPiece(subject);
+	anchor = _php_re2_get_anchor_from_flags(flags);
 
 	if (ZEND_NUM_ARGS() > 2) {
-		int i;
-		bool match;
-		std::string str[argc];
-		RE2::Arg argv[argc];
-		RE2::Arg *args[argc];
+		re2::StringPiece pieces[++argc];
 
-		for (i = 0; i < argc; i++) {
-			argv[i] = &str[i];
-			args[i] = &argv[i];
-		}
-
-		if (ZEND_NUM_ARGS() == 4 && flags & RE2_MATCH_FULL) {
-			match = RE2::FullMatchN(subject_str, *re2, args, argc);
-		} else {
-			match = RE2::PartialMatchN(subject_str, *re2, args, argc);
-		}
-
-		if (match) {
+		if (re2->Match(subject_piece, 0, subject_piece.size(), anchor, pieces, argc)) {
 			if (matches != NULL) {
 				zval_dtor(matches);
 			}
 
 			array_init_size(matches, argc);
-			_php_re2_populate_matches(re2, matches, str, argc);
+			_php_re2_populate_matches(re2, matches, pieces, argc);
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
 		}
 	} else {
-		bool match = RE2::PartialMatch(subject_str, *re2);
-		if (match) {
+		if (re2->Match(subject_piece, 0, subject_piece.size(), anchor, NULL, 0)) {
 			RETURN_TRUE;
 		} else {
 			RETURN_FALSE;
@@ -295,10 +306,8 @@ PHP_FUNCTION(re2_match)
 PHP_FUNCTION(re2_match_all)
 {
 	char *subject;
-	std::string subject_str;
 	re2::StringPiece subject_piece;
-	int subject_len, i, num_matches = 0;
-	int argc;
+	int subject_len, argc, start_pos = 0, end_pos, num_matches = 0;
 	zval *pattern = NULL, *matches = NULL, *piece_matches = NULL;
 	bool was_empty = false;
 	RE2 *re2;
@@ -309,19 +318,11 @@ PHP_FUNCTION(re2_match_all)
 
 	RE2_GET_PATTERN;
 
-	subject_str = std::string(subject);
-	subject_piece = re2::StringPiece(subject_str);
+	subject_piece = re2::StringPiece(subject);
+	end_pos = subject_piece.size();
+	re2::StringPiece pieces[++argc];
 
-	std::string str[argc];
-	RE2::Arg argv[argc];
-	RE2::Arg *args[argc];
-
-	for (i = 0; i < argc; i++) {
-		argv[i] = &str[i];
-		args[i] = &argv[i];
-	}
-
-	while (RE2::FindAndConsumeN(&subject_piece, *re2, args, argc)) {
+	while (start_pos < end_pos && re2->Match(subject_piece, start_pos, end_pos, RE2::UNANCHORED, pieces, argc)) {
 		if (!num_matches++) {
 			if (matches != NULL) {
 				zval_dtor(matches);
@@ -329,7 +330,7 @@ PHP_FUNCTION(re2_match_all)
 			array_init(matches);
 		}
 
-		if (subject_piece.empty()) {
+		if (!pieces[0].size()) {
 			if (was_empty) {
 				/* matched zero-length regex, exit to avoid infinite loop */
 				break;
@@ -339,9 +340,11 @@ PHP_FUNCTION(re2_match_all)
 
 		MAKE_STD_ZVAL(piece_matches);
 		array_init_size(piece_matches, argc);
-		_php_re2_populate_matches(re2, piece_matches, str, argc);
+		_php_re2_populate_matches(re2, piece_matches, pieces, argc);
 		add_next_index_zval(matches, piece_matches);
 		piece_matches = NULL;
+
+		start_pos += pieces[0].size() - 1;
 	}
 
 	RETVAL_LONG(num_matches);
@@ -382,7 +385,7 @@ PHP_FUNCTION(re2_replace)
 }
 /*	}}} */
 
-/*	{{{ proto array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_MATCH_PARTIAL])
+/*	{{{ proto array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_ANCHOR_NONE])
 	Return array entries which match the pattern (or which don't, with RE2_GREP_INVERT.) */
 PHP_FUNCTION(re2_grep)
 {
@@ -390,9 +393,11 @@ PHP_FUNCTION(re2_grep)
 	long flags;
 	zval *pattern, *input, **entry;
 	RE2 *re2;
-	bool did_match, full, invert;
+	bool did_match, invert;
 	char *string_key;
 	ulong num_key;
+	RE2::Anchor anchor;
+	re2::StringPiece subject_piece;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "za|l", &pattern, &input, &flags) == FAILURE) {
 		RETURN_FALSE;
@@ -400,8 +405,13 @@ PHP_FUNCTION(re2_grep)
 
 	RE2_GET_PATTERN;
 
-	invert = ZEND_NUM_ARGS() == 3 && flags & RE2_GREP_INVERT;
-	full = ZEND_NUM_ARGS() == 3 && flags & RE2_MATCH_FULL;
+	if (ZEND_NUM_ARGS() < 3) {
+		/* default flags */
+		flags = RE2_ANCHOR_NONE;
+	}
+
+	invert = flags & RE2_GREP_INVERT;
+	anchor = _php_re2_get_anchor_from_flags(flags);
 
 	array_init(return_value);
 	zend_hash_internal_pointer_reset(Z_ARRVAL_P(input));
@@ -413,11 +423,8 @@ PHP_FUNCTION(re2_grep)
 			convert_to_string(&subject);
 		}
 
-		if (full) {
-			did_match = RE2::FullMatch(Z_STRVAL(subject), *re2);
-		} else {
-			did_match = RE2::PartialMatch(Z_STRVAL(subject), *re2);
-		}
+		subject_piece = re2::StringPiece(Z_STRVAL(subject));
+		did_match = re2->Match(subject_piece, 0, Z_STRLEN(subject), anchor, NULL, 0);
 
 		if (did_match ^ invert) {
 			Z_ADDREF_PP(entry);
@@ -731,8 +738,9 @@ PHP_MINIT_FUNCTION(re2)
 	re2_options_object_handlers.clone_obj = NULL;
 
 	/* register constants */
-	REGISTER_LONG_CONSTANT("RE2_MATCH_FULL", RE2_MATCH_FULL, CONST_CS | CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("RE2_MATCH_PARTIAL", RE2_MATCH_PARTIAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_ANCHOR_START", RE2_ANCHOR_START, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_ANCHOR_BOTH", RE2_ANCHOR_BOTH, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_GREP_INVERT", RE2_GREP_INVERT, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_REPLACE_GLOBAL", RE2_REPLACE_GLOBAL, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_REPLACE_FIRST", RE2_REPLACE_FIRST, CONST_CS | CONST_PERSISTENT);

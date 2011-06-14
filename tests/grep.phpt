@@ -13,8 +13,11 @@ print_r(re2_grep($re2, $input));
 echo "*** Testing RE2 grep: negative\n";
 print_r(re2_grep($re2, $input, RE2_GREP_INVERT));
 
-echo "*** Testing RE2 grep: full positive\n";
-print_r(re2_grep($re2, $input, RE2_MATCH_FULL));
+echo "*** Testing RE2 grep: anchored positive\n";
+print_r(re2_grep($re2, $input, RE2_ANCHOR_BOTH));
+
+echo "*** Testing RE2 grep: anchored negative\n";
+print_r(re2_grep($re2, $input, RE2_ANCHOR_BOTH | RE2_GREP_INVERT));
 
 echo "*** Testing RE2 grep: empty input\n";
 print_r(re2_grep($re2, array()));
@@ -40,10 +43,18 @@ Array
     [foo] => Goodbye world
     [2] => Hello!
 )
-*** Testing RE2 grep: full positive
+*** Testing RE2 grep: anchored positive
 Array
 (
     [bar] => Hello cpp
+)
+*** Testing RE2 grep: anchored negative
+Array
+(
+    [0] => Hello regex world
+    [1] => Hello php world
+    [foo] => Goodbye world
+    [2] => Hello!
 )
 *** Testing RE2 grep: empty input
 Array

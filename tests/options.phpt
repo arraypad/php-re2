@@ -73,14 +73,18 @@ Warning: re2_match(): Invalid pattern in %s on line %d
 bool(false)
 *** Testing RE2 option: longest_match
 bool(true)
-array(1) {
+array(2) {
   [0]=>
+  string(1) "a"
+  [1]=>
   string(1) "a"
 }
 bool(true)
-array(1) {
+array(2) {
   [0]=>
-  string(1) "aaa"
+  string(3) "aaa"
+  [1]=>
+  string(3) "aaa"
 }
 *** Testing RE2 option: log_errors
 

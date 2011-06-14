@@ -23,21 +23,27 @@ object(RE2)#1 (1) {
 }
 *** Testing RE2 class: match
 bool(true)
-array(1) {
+array(2) {
   [0]=>
+  string(11) "Hello regex"
+  [1]=>
   string(5) "regex"
 }
 *** Testing RE2 class: match_all
 int(2)
 array(2) {
   [0]=>
-  array(1) {
+  array(2) {
     [0]=>
+    string(11) "Hello regex"
+    [1]=>
     string(5) "regex"
   }
   [1]=>
-  array(1) {
+  array(2) {
     [0]=>
+    string(9) "Hello PHP"
+    [1]=>
     string(3) "PHP"
   }
 }

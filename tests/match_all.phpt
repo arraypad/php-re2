@@ -16,18 +16,24 @@ var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches), $matches);
 int(3)
 array(3) {
   [0]=>
-  array(1) {
+  array(2) {
     [0]=>
+    string(17) "Hello regex world"
+    [1]=>
     string(5) "regex"
   }
   [1]=>
-  array(1) {
+  array(2) {
     [0]=>
+    string(15) "Hello php world"
+    [1]=>
     string(3) "php"
   }
   [2]=>
-  array(1) {
+  array(2) {
     [0]=>
+    string(15) "Hello cpp world"
+    [1]=>
     string(3) "cpp"
   }
 }
@@ -35,30 +41,36 @@ array(3) {
 int(3)
 array(3) {
   [0]=>
-  array(3) {
+  array(4) {
     [0]=>
-    string(5) "Hello"
+    string(17) "Hello regex world"
     [1]=>
-    string(5) "regex"
+    string(5) "Hello"
     [2]=>
+    string(5) "regex"
+    [3]=>
     string(5) "world"
   }
   [1]=>
-  array(3) {
+  array(4) {
     [0]=>
-    string(5) "Hello"
+    string(15) "Hello php world"
     [1]=>
-    string(3) "php"
+    string(5) "Hello"
     [2]=>
+    string(3) "php"
+    [3]=>
     string(5) "world"
   }
   [2]=>
-  array(3) {
+  array(4) {
     [0]=>
-    string(5) "Hello"
+    string(15) "Hello cpp world"
     [1]=>
-    string(3) "cpp"
+    string(5) "Hello"
     [2]=>
+    string(3) "cpp"
+    [3]=>
     string(5) "world"
   }
 }

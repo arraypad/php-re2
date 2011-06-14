@@ -3,23 +3,29 @@ re2 - re2_match
 --FILE--
 <?php
 
-echo "*** Testing re2_match(): no subpatterns, positive (default) partial match\n";
+echo "*** Testing re2_match(): no subpatterns, positive (default) unanchored match\n";
 var_dump(re2_match('Hello \w+ world', 'Hello regex world!'));
 
-echo "*** Testing re2_match(): no subpatterns, negative (default) partial match\n";
+echo "*** Testing re2_match(): no subpatterns, negative (default) unanchored match\n";
 var_dump(re2_match('Hello \w+ world', 'Hello "regex" world!'));
 
-echo "*** Testing re2_match(): no subpatterns, positive (explicit) partial match\n";
-var_dump(re2_match('Hello \w+ world', 'Hello regex world!', $matches, RE2_MATCH_PARTIAL));
+echo "*** Testing re2_match(): no subpatterns, positive (explicit) unanchored match\n";
+var_dump(re2_match('Hello \w+ world', 'Hello regex world!', $matches, RE2_ANCHOR_NONE));
 
-echo "*** Testing re2_match(): no subpatterns, negative (explicit) partial match\n";
-var_dump(re2_match('Hello \w+ world', 'Hello "regex" world!', $matches, RE2_MATCH_PARTIAL));
+echo "*** Testing re2_match(): no subpatterns, negative (explicit) unanchored match\n";
+var_dump(re2_match('Hello \w+ world', 'Hello "regex" world!', $matches, RE2_ANCHOR_NONE));
 
-echo "*** Testing re2_match(): no subpatterns, positive full match\n";
-var_dump(re2_match('Hello \w+ world!', 'Hello regex world!', $matches, RE2_MATCH_FULL));
+echo "*** Testing re2_match(): no subpatterns, positive ANCHOR_BOTH\n";
+var_dump(re2_match('Hello \w+ world!', 'Hello regex world!', $matches, RE2_ANCHOR_BOTH));
 
-echo "*** Testing re2_match(): no subpatterns, negative full match\n";
-var_dump(re2_match('Hello \w+ world', 'Hello regex world!', $matches, RE2_MATCH_FULL));
+echo "*** Testing re2_match(): no subpatterns, negative ANCHOR_BOTH\n";
+var_dump(re2_match('Hello \w+ world', 'Hello regex world!', $matches, RE2_ANCHOR_BOTH));
+
+echo "*** Testing re2_match(): no subpatterns, positive ANCHOR_START\n";
+var_dump(re2_match('Hello \w+ world', 'Hello regex world!', $matches, RE2_ANCHOR_START));
+
+echo "*** Testing re2_match(): no subpatterns, negative ANCHOR_START\n";
+var_dump(re2_match('\w+ world', 'Hello regex world', $matches, RE2_ANCHOR_START));
 
 echo "*** Testing re2_match(): subpattern used but no matches arguments passed\n";
 var_dump(re2_match('Hello (\w+) world', 'Hello regex world'));
@@ -35,42 +41,52 @@ var_dump(re2_match('(?P<foo>Hello) (\w+) (?P<bar>.*)', 'Hello regex world', $mat
 
 ?>
 --EXPECTF--
-*** Testing re2_match(): no subpatterns, positive (default) partial match
+*** Testing re2_match(): no subpatterns, positive (default) unanchored match
 bool(true)
-*** Testing re2_match(): no subpatterns, negative (default) partial match
+*** Testing re2_match(): no subpatterns, negative (default) unanchored match
 bool(false)
-*** Testing re2_match(): no subpatterns, positive (explicit) partial match
+*** Testing re2_match(): no subpatterns, positive (explicit) unanchored match
 bool(true)
-*** Testing re2_match(): no subpatterns, negative (explicit) partial match
+*** Testing re2_match(): no subpatterns, negative (explicit) unanchored match
 bool(false)
-*** Testing re2_match(): no subpatterns, positive full match
+*** Testing re2_match(): no subpatterns, positive ANCHOR_BOTH
 bool(true)
-*** Testing re2_match(): no subpatterns, negative full match
+*** Testing re2_match(): no subpatterns, negative ANCHOR_BOTH
+bool(false)
+*** Testing re2_match(): no subpatterns, positive ANCHOR_START
+bool(true)
+*** Testing re2_match(): no subpatterns, negative ANCHOR_START
 bool(false)
 *** Testing re2_match(): subpattern used but no matches arguments passed
 bool(true)
 *** Testing re2_match(): 1 subpattern
 bool(true)
-array(1) {
+array(2) {
   [0]=>
+  string(17) "Hello regex world"
+  [1]=>
   string(5) "regex"
 }
 *** Testing re2_match(): 3 subpatterns
 bool(true)
-array(3) {
+array(4) {
   [0]=>
-  string(5) "Hello"
+  string(17) "Hello regex world"
   [1]=>
-  string(5) "regex"
+  string(5) "Hello"
   [2]=>
+  string(5) "regex"
+  [3]=>
   string(5) "world"
 }
 *** Testing re2_match(): named groups
 bool(true)
-array(3) {
+array(4) {
+  [0]=>
+  string(17) "Hello regex world"
   ["foo"]=>
   string(5) "Hello"
-  [0]=>
+  [1]=>
   string(5) "regex"
   ["bar"]=>
   string(5) "world"
