@@ -41,6 +41,7 @@ extern zend_module_entry re2_module_entry;
 #endif
 
 PHP_FUNCTION(re2_match);
+PHP_FUNCTION(re2_match_all);
 
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);

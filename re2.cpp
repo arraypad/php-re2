@@ -38,17 +38,24 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match, 0, 0, 2)
 	ZEND_ARG_INFO(0, argc)
 	ZEND_ARG_INFO(1, matches)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match_all, 0, 0, 4)
+	ZEND_ARG_INFO(0, pattern)
+	ZEND_ARG_INFO(0, subject)
+	ZEND_ARG_INFO(0, argc)
+	ZEND_ARG_INFO(1, matches)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ re2_functions[]
  */
 const zend_function_entry re2_functions[] = {
 	PHP_FE(re2_match, arginfo_re2_match)
+	PHP_FE(re2_match_all, arginfo_re2_match_all)
 	{NULL, NULL, NULL}
 };
 /* }}} */
 
-/* {{{ */
+/* {{{ PHP_FUNCTION(re2_match) */
 PHP_FUNCTION(re2_match)
 {
 	char *subject, *pattern;
@@ -97,6 +104,69 @@ PHP_FUNCTION(re2_match)
 		} else {
 			RETURN_FALSE;
 		}
+	}
+}
+/* }}} */
+
+/* {{{ PHP_FUNCTION(re2_match_all) */
+PHP_FUNCTION(re2_match_all)
+{
+	char *subject, *pattern;
+	std::string subject_str, pattern_str;
+	re2::StringPiece subject_piece;
+	int subject_len, pattern_len, i;
+	long argc;
+	zval *matches = NULL, *piece_matches = NULL;
+	bool did_match = false, was_empty = false;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sslz", &pattern, &pattern_len, &subject, &subject_len, &argc, &matches) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	subject_str = std::string(subject);
+	subject_piece = re2::StringPiece(subject_str);
+	pattern_str = std::string(pattern);
+
+	std::string str[argc];
+	RE2::Arg argv[argc];
+	RE2::Arg *args[argc];
+
+	for (i = 0; i < argc; i++) {
+		argv[i] = &str[i];
+		args[i] = &argv[i];
+	}
+
+	while (RE2::FindAndConsumeN(&subject_piece, pattern_str, args, argc)) {
+		if (!did_match) {
+			if (matches != NULL) {
+				zval_dtor(matches);
+			}
+			array_init(matches);
+			did_match = true;
+		}
+
+		if (subject_piece.empty()) {
+			if (was_empty) {
+				/* matched zero-length regex, exit to avoid infinite loop */
+				break;
+			}
+			was_empty = true;
+		}
+		
+
+		MAKE_STD_ZVAL(piece_matches);
+		array_init_size(piece_matches, argc);
+		for (i = 0; i < argc; i++) {
+			add_next_index_string(piece_matches, str[i].c_str(), 1);
+		}
+		add_next_index_zval(matches, piece_matches);
+		piece_matches = NULL;
+	}
+
+	if (did_match) {
+		RETURN_TRUE;
+	} else {
+		RETURN_FALSE;
 	}
 }
 /* }}} */

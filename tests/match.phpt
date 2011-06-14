@@ -11,7 +11,6 @@ var_dump(re2_match('Hello \w+ world', 'Hello "regex" world'));
 
 echo "*** Testing re2_match(): 1 subpattern\n";
 var_dump(re2_match('Hello (\w+) world', 'Hello regex world', 1, $matches), $matches);
-unset($matches);
 
 echo "*** Testing re2_match(): 3 subpatterns\n";
 var_dump(re2_match('(Hello) (\w+) (.*)', 'Hello regex world', 3, $matches), $matches);
