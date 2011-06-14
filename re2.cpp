@@ -58,6 +58,7 @@ const zend_function_entry re2_functions[] = {
 	PHP_FE(re2_match, arginfo_re2_match)
 	PHP_FE(re2_match_all, arginfo_re2_match_all)
 	PHP_FE(re2_replace, arginfo_re2_replace)
+	PHP_FE(re2_quote, NULL)
 	{NULL, NULL, NULL}
 };
 /* }}} */
@@ -202,6 +203,23 @@ PHP_FUNCTION(re2_replace)
 	}
 
 	RETVAL_STRINGL(subject_str.c_str(), subject_str.length(), 1);
+}
+/* }}} */
+
+/* {{{ PHP_FUNCTION(re2_quote) */
+PHP_FUNCTION(re2_quote)
+{
+	char *subject;
+	std::string subject_str, out_str;
+	int subject_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &subject, &subject_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	subject_str = std::string(subject);
+	out_str = RE2::QuoteMeta(subject);
+	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
 }
 /* }}} */
 
