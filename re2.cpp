@@ -139,6 +139,11 @@ PHP_FUNCTION(re2_match)
 		RETURN_FALSE;
 	}
 
+	if (ZEND_NUM_ARGS() == 3) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Number of subpatterns argument passed but no matches argument");
+		RETURN_FALSE;
+	}
+
 	RE2_GET_PATTERN;
 
 	subject_str = std::string(subject);
