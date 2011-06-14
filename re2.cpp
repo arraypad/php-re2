@@ -37,6 +37,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match, 0, 0, 2)
 	ZEND_ARG_INFO(0, subject)
 	ZEND_ARG_INFO(0, argc)
 	ZEND_ARG_INFO(1, matches)
+	ZEND_ARG_INFO(0, flags)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match_all, 0, 0, 4)
 	ZEND_ARG_INFO(0, pattern)
@@ -48,6 +49,7 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_replace, 0, 0, 3)
 	ZEND_ARG_INFO(0, pattern)
 	ZEND_ARG_INFO(0, subject)
 	ZEND_ARG_INFO(0, replace)
+	ZEND_ARG_INFO(0, flags)
 	ZEND_ARG_INFO(1, count)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_compile, 0, 0, 1)
@@ -125,17 +127,25 @@ zend_object_value re2_create_handler(zend_class_entry *type TSRMLS_DC)
 		RETURN_FALSE; \
 	}
 
+/* {{{ constants */
+#define RE2_MATCH_PARTIAL	1
+#define RE2_MATCH_FULL		2
+
+#define RE2_REPLACE_GLOBAL	1
+#define RE2_REPLACE_FIRST   2
+/* }}} */
+
 /* {{{ PHP_FUNCTION(re2_match) */
 PHP_FUNCTION(re2_match)
 {
 	char *subject;
 	std::string subject_str;
 	int subject_len;
-	long argc;
+	long argc, flags;
 	zval *pattern = NULL, *matches = NULL;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|lz", &pattern, &subject, &subject_len, &argc, &matches) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zs|lzl", &pattern, &subject, &subject_len, &argc, &matches, &flags) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -150,6 +160,7 @@ PHP_FUNCTION(re2_match)
 
 	if (ZEND_NUM_ARGS() > 2) {
 		int i;
+		bool match;
 		std::string str[argc];
 		RE2::Arg argv[argc];
 		RE2::Arg *args[argc];
@@ -159,7 +170,11 @@ PHP_FUNCTION(re2_match)
 			args[i] = &argv[i];
 		}
 
-		bool match = RE2::PartialMatchN(subject_str, *re2, args, argc);
+		if (ZEND_NUM_ARGS() == 5 && flags & RE2_MATCH_FULL) {
+			match = RE2::FullMatchN(subject_str, *re2, args, argc);
+		} else {
+			match = RE2::PartialMatchN(subject_str, *re2, args, argc);
+		}
 
 		if (match) {
 			if (matches != NULL) {
@@ -256,11 +271,11 @@ PHP_FUNCTION(re2_replace)
 	char *subject, *replace;
 	std::string subject_str, pattern_str, replace_str;
 	int subject_len, replace_len, i;
-	long count;
+	long count, flags;
 	zval *pattern, *count_zv, *out;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zss|z", &pattern, &replace, &replace_len, &subject, &subject_len, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zss|lz", &pattern, &replace, &replace_len, &subject, &subject_len, &flags, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -269,9 +284,13 @@ PHP_FUNCTION(re2_replace)
 	subject_str = std::string(subject);
 	replace_str = std::string(replace);
 
-	count = RE2::GlobalReplace(&subject_str, *re2, replace_str);
+	if (ZEND_NUM_ARGS() >= 4 && flags & RE2_REPLACE_FIRST) {
+		count = RE2::Replace(&subject_str, *re2, replace_str) ? 1 : 0;
+	} else {
+		count = RE2::GlobalReplace(&subject_str, *re2, replace_str);
+	}
 
-	if (ZEND_NUM_ARGS() == 4) {
+	if (ZEND_NUM_ARGS() == 5) {
 		ZVAL_LONG(count_zv, count);
 	}
 
@@ -342,12 +361,20 @@ ZEND_GET_MODULE(re2)
  */
 PHP_MINIT_FUNCTION(re2)
 {
+	/* register class */
 	zend_class_entry ce;
 	INIT_CLASS_ENTRY(ce, PHP_RE2_CLASS_NAME, re2_class_functions);
 	php_re2_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
 	php_re2_class_entry->create_object = re2_create_handler;
 	memcpy(&re2_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	re2_object_handlers.clone_obj = NULL;
+
+	/* register constants */
+	REGISTER_LONG_CONSTANT("RE2_MATCH_FULL", RE2_MATCH_FULL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_MATCH_PARTIAL", RE2_MATCH_PARTIAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_REPLACE_GLOBAL", RE2_REPLACE_GLOBAL, CONST_CS | CONST_PERSISTENT);
+	REGISTER_LONG_CONSTANT("RE2_REPLACE_FIRST", RE2_REPLACE_FIRST, CONST_CS | CONST_PERSISTENT);
+
 	return SUCCESS;
 }
 /* }}} */
