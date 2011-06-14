@@ -6,7 +6,7 @@ php-re2 is a PHP extension which provides an interface to Google's [RE2 regular-
 > 
 > On large inputs, RE2 is often much faster than backtracking engines; its use of automata theory lets it apply optimizations that the others cannot.
 > 
-> Unlike most automata-based engines, RE2 implements almost all the common Perl and PCRE features and syntactic sugars. It also finds the leftmost-first match, the same match that Perl would, and can return submatch information. The one significant exception is that RE2 drops support for backreferences¹ and generalized zero-width assertions, because they cannot be implemented efficiently. The syntax page gives full details.
+> Unlike most automata-based engines, RE2 implements almost all the common Perl and PCRE features and syntactic sugars. It also finds the leftmost-first match, the same match that Perl would, and can return submatch information. The one significant exception is that RE2 drops support for backreferences and generalized zero-width assertions, because they cannot be implemented efficiently. The [syntax page](http://code.google.com/p/re2/wiki/Syntax) gives full details.
 
 Functions
 =========
@@ -28,6 +28,10 @@ Returns how many times the pattern matched the subject.
 #### string re2_replace(mixed $pattern, string $replacement, string $subject [, int $flags = RE2_REPLACE_GLOBAL [, int &$count]])
 
 Replaces all matches of the pattern with the replacement.
+
+#### array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_MATCH_PARTIAL])
+
+Return array entries which match the pattern (or which don't, with RE2_GREP_INVERT.)
 
 #### string re2_quote(string $subject)
 
