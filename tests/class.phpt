@@ -37,12 +37,12 @@ array(2) {
     [0]=>
     string(11) "Hello regex"
     [1]=>
-    string(5) "regex"
+    string(9) "Hello PHP"
   }
   [1]=>
   array(2) {
     [0]=>
-    string(9) "Hello PHP"
+    string(5) "regex"
     [1]=>
     string(3) "PHP"
   }

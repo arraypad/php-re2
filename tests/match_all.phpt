@@ -5,146 +5,215 @@ re2 - re2_match_all
 
 echo "*** Testing re2_match_all(): 1 subpattern\n";
 $subject = 'Hello regex world Hello php world Hello cpp world';
-var_dump(re2_match_all('Hello (\w+) world', $subject, $matches), $matches);
+var_dump(re2_match_all('Hello (\w+) world', $subject, $matches)); print_r($matches);
 
 echo "*** Testing re2_match_all(): 3 subpatterns\n";
-var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches), $matches);
+var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches)); print_r($matches);
+
+echo "*** Testing re2_match_all(): 3 subpatterns, RE2_SET_ORDER\n";
+var_dump(re2_match_all('(Hello) (\w+) (\w+)', $subject, $matches, RE2_SET_ORDER)); print_r($matches);
 
 echo "*** Testing re2_match_all(): offset\n";
-var_dump(re2_match_all('Hello \w+ world', $subject, $matches, 0, 17), $matches);
+var_dump(re2_match_all('Hello \w+ world', $subject, $matches, RE2_PATTERN_ORDER, 17)); print_r($matches);
 
 echo "*** Testing re2_match_all(): offset capture\n";
-var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTURE), $matches);
+var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTURE)); print_r($matches);
+
+echo "*** Testing re2_match_all(): offset capture, RE2_SET_ORDER\n";
+var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTURE | RE2_SET_ORDER)); print_r($matches);
 ?>
 --EXPECTF--
 *** Testing re2_match_all(): 1 subpattern
 int(3)
-array(3) {
-  [0]=>
-  array(2) {
-    [0]=>
-    string(17) "Hello regex world"
-    [1]=>
-    string(5) "regex"
-  }
-  [1]=>
-  array(2) {
-    [0]=>
-    string(15) "Hello php world"
-    [1]=>
-    string(3) "php"
-  }
-  [2]=>
-  array(2) {
-    [0]=>
-    string(15) "Hello cpp world"
-    [1]=>
-    string(3) "cpp"
-  }
-}
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello regex world
+            [1] => Hello php world
+            [2] => Hello cpp world
+        )
+
+    [1] => Array
+        (
+            [0] => regex
+            [1] => php
+            [2] => cpp
+        )
+
+)
 *** Testing re2_match_all(): 3 subpatterns
 int(3)
-array(3) {
-  [0]=>
-  array(4) {
-    [0]=>
-    string(17) "Hello regex world"
-    [1]=>
-    string(5) "Hello"
-    [2]=>
-    string(5) "regex"
-    [3]=>
-    string(5) "world"
-  }
-  [1]=>
-  array(4) {
-    [0]=>
-    string(15) "Hello php world"
-    [1]=>
-    string(5) "Hello"
-    [2]=>
-    string(3) "php"
-    [3]=>
-    string(5) "world"
-  }
-  [2]=>
-  array(4) {
-    [0]=>
-    string(15) "Hello cpp world"
-    [1]=>
-    string(5) "Hello"
-    [2]=>
-    string(3) "cpp"
-    [3]=>
-    string(5) "world"
-  }
-}
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello regex world
+            [1] => Hello php world
+            [2] => Hello cpp world
+        )
+
+    [1] => Array
+        (
+            [0] => Hello
+            [1] => Hello
+            [2] => Hello
+        )
+
+    [2] => Array
+        (
+            [0] => regex
+            [1] => php
+            [2] => cpp
+        )
+
+    [3] => Array
+        (
+            [0] => world
+            [1] => world
+            [2] => world
+        )
+
+)
+*** Testing re2_match_all(): 3 subpatterns, RE2_SET_ORDER
+int(3)
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello regex world
+            [1] => Hello
+            [2] => regex
+            [3] => world
+        )
+
+    [1] => Array
+        (
+            [0] => Hello php world
+            [1] => Hello
+            [2] => php
+            [3] => world
+        )
+
+    [2] => Array
+        (
+            [0] => Hello cpp world
+            [1] => Hello
+            [2] => cpp
+            [3] => world
+        )
+
+)
 *** Testing re2_match_all(): offset
 int(2)
-array(2) {
-  [0]=>
-  array(1) {
-    [0]=>
-    string(15) "Hello php world"
-  }
-  [1]=>
-  array(1) {
-    [0]=>
-    string(15) "Hello cpp world"
-  }
-}
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello php world
+            [1] => Hello cpp world
+        )
+
+)
 *** Testing re2_match_all(): offset capture
 int(3)
-array(3) {
-  [0]=>
-  array(2) {
-    [0]=>
-    array(2) {
-      [0]=>
-      string(17) "Hello regex world"
-      [1]=>
-      int(0)
-    }
-    [1]=>
-    array(2) {
-      [0]=>
-      string(5) "regex"
-      [1]=>
-      int(6)
-    }
-  }
-  [1]=>
-  array(2) {
-    [0]=>
-    array(2) {
-      [0]=>
-      string(15) "Hello php world"
-      [1]=>
-      int(18)
-    }
-    [1]=>
-    array(2) {
-      [0]=>
-      string(3) "php"
-      [1]=>
-      int(24)
-    }
-  }
-  [2]=>
-  array(2) {
-    [0]=>
-    array(2) {
-      [0]=>
-      string(15) "Hello cpp world"
-      [1]=>
-      int(34)
-    }
-    [1]=>
-    array(2) {
-      [0]=>
-      string(3) "cpp"
-      [1]=>
-      int(40)
-    }
-  }
-}
+Array
+(
+    [0] => Array
+        (
+            [0] => Array
+                (
+                    [0] => Hello regex world
+                    [1] => 0
+                )
+
+            [1] => Array
+                (
+                    [0] => Hello php world
+                    [1] => 18
+                )
+
+            [2] => Array
+                (
+                    [0] => Hello cpp world
+                    [1] => 34
+                )
+
+        )
+
+    [1] => Array
+        (
+            [0] => Array
+                (
+                    [0] => regex
+                    [1] => 6
+                )
+
+            [1] => Array
+                (
+                    [0] => php
+                    [1] => 24
+                )
+
+            [2] => Array
+                (
+                    [0] => cpp
+                    [1] => 40
+                )
+
+        )
+
+)
+*** Testing re2_match_all(): offset capture, RE2_SET_ORDER
+int(3)
+Array
+(
+    [0] => Array
+        (
+            [0] => Array
+                (
+                    [0] => Hello regex world
+                    [1] => 0
+                )
+
+            [1] => Array
+                (
+                    [0] => regex
+                    [1] => 6
+                )
+
+        )
+
+    [1] => Array
+        (
+            [0] => Array
+                (
+                    [0] => Hello php world
+                    [1] => 18
+                )
+
+            [1] => Array
+                (
+                    [0] => php
+                    [1] => 24
+                )
+
+        )
+
+    [2] => Array
+        (
+            [0] => Array
+                (
+                    [0] => Hello cpp world
+                    [1] => 34
+                )
+
+            [1] => Array
+                (
+                    [0] => cpp
+                    [1] => 40
+                )
+
+        )
+
+)
