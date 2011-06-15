@@ -21,13 +21,17 @@ The main differences are:
 
 Returns whether the pattern matches the subject.
 
-#### int re2_match_all(mixed $pattern, string $subject, array &$matches [, int $flags = 0 [, int $offset = 0]])
+#### int re2_match_all(mixed $pattern, string $subject, array &$matches [, int $flags = RE2_PATTERN_ORDER [, int $offset = 0]])
 
 Returns how many times the pattern matched the subject.
 
-#### string re2_replace(mixed $pattern, string $replacement, string $subject [, int $flags = RE2_REPLACE_GLOBAL [, int &$count]])
+#### string re2_replace(mixed $pattern, string $replacement, string $subject [, int $limit = -1 [, int &$count]])
 
 Replaces all matches of the pattern with the replacement.
+
+#### string re2_replace_callback(mixed $pattern, mixed $callback, string $subject [, int $limit = -1 [, int &$count]])
+
+Replaces all matches of the pattern with the value returned by the replacement callback.
 
 #### array re2_grep(mixed $pattern, array $subject [, int $flags = RE2_ANCHOR_NONE])
 
