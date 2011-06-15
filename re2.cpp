@@ -214,9 +214,6 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 #define RE2_OFFSET_CAPTURE	8
 #define RE2_PATTERN_ORDER	16
 #define RE2_SET_ORDER		32
-
-#define RE2_REPLACE_GLOBAL	1
-#define RE2_REPLACE_FIRST   2
 /* }}} */
 
 /*	{{{ match helpers */
@@ -454,28 +451,28 @@ PHP_FUNCTION(re2_match_all)
 }
 /*	}}} */
 
-/*	{{{ proto string re2_replace(mixed $pattern, string $replacement, string $subject [, int $flags = RE2_REPLACE_GLOBAL [, int &$count]])
+/*	{{{ proto string re2_replace(mixed $pattern, string $replacement, string $subject [, int $limit = -1 [, int &$count]])
 	Replaces all matches of the pattern with the replacement. */
 PHP_FUNCTION(re2_replace)
 {
 	char *subject, *replace;
 	std::string pattern_str, out_str = "";
-	int subject_len, replace_len, argc, limit = 0;
-	long flags = RE2_REPLACE_GLOBAL, num_matches;
+	int subject_len, replace_len, argc;
+	long num_matches, limit = 0;
 	zval *pattern, *count_zv, *out;
 	RE2 *re2;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zss|lz", &pattern, &replace, &replace_len, &subject, &subject_len, &flags, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zss|lz", &pattern, &replace, &replace_len, &subject, &subject_len, &limit, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
 	RE2_GET_PATTERN;
 
-	if (ZEND_NUM_ARGS() > 3 && flags & RE2_REPLACE_FIRST) {
-		limit = 1;
+	if (limit < 0) {
+		limit = 0;
 	}
 
-	num_matches = _php_re2_match_common(re2, NULL, NULL, subject, subject_len, &out_str, replace, replace_len, limit, 0, argc, flags);
+	num_matches = _php_re2_match_common(re2, NULL, NULL, subject, subject_len, &out_str, replace, replace_len, limit, 0, argc, 0);
 	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
 
 	if (ZEND_NUM_ARGS() == 5) {
@@ -844,8 +841,6 @@ PHP_MINIT_FUNCTION(re2)
 	REGISTER_LONG_CONSTANT("RE2_OFFSET_CAPTURE", RE2_OFFSET_CAPTURE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_PATTERN_ORDER", RE2_PATTERN_ORDER, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_SET_ORDER", RE2_SET_ORDER, CONST_CS | CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("RE2_REPLACE_GLOBAL", RE2_REPLACE_GLOBAL, CONST_CS | CONST_PERSISTENT);
-	REGISTER_LONG_CONSTANT("RE2_REPLACE_FIRST", RE2_REPLACE_FIRST, CONST_CS | CONST_PERSISTENT);
 
 	return SUCCESS;
 }

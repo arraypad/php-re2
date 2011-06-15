@@ -13,10 +13,16 @@ echo "*** Testing re2_replace(): non matching\n";
 var_dump(re2_replace('Hello (\w+)', 'Goodbye \1', 'Hi regex world'));
 
 echo "*** Testing re2_replace(): with count\n";
-var_dump(re2_replace('\w+', 'foo', 'Hello regex world', RE2_REPLACE_GLOBAL, $count), $count);
+var_dump(re2_replace('\w+', 'foo', 'Hello regex world', -1, $count), $count);
 
 echo "*** Testing re2_replace(): first with count\n";
-var_dump(re2_replace('\w+', 'foo', 'Hello regex world', RE2_REPLACE_FIRST, $count), $count);
+var_dump(re2_replace('\w+', 'foo', 'Hello regex world', 1, $count), $count);
+
+echo "*** Testing re2_replace(): limit 2 with count\n";
+var_dump(re2_replace('\w+', 'foo', 'Hello regex world', 2, $count), $count);
+
+echo "*** Testing re2_replace(): limit 2 no count\n";
+var_dump(re2_replace('\w+', 'foo', 'Hello regex world', 2));
 
 ?>
 --EXPECTF--
@@ -32,3 +38,8 @@ int(3)
 *** Testing re2_replace(): first with count
 string(15) "foo regex world"
 int(1)
+*** Testing re2_replace(): limit 2 with count
+string(13) "foo foo world"
+int(2)
+*** Testing re2_replace(): limit 2 no count
+string(13) "foo foo world"
