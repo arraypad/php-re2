@@ -323,9 +323,9 @@ PHP_FUNCTION(re2_match)
 	Returns how many times the pattern matched the subject. */
 PHP_FUNCTION(re2_match_all)
 {
-	char *subject;
+	const char *subject, *start_ptr, *ptr, *end_ptr, *last_ptr = NULL;
 	re2::StringPiece subject_piece;
-	int subject_len, argc, start_pos = 0, end_pos, num_matches = 0;
+	int subject_len, argc, end_pos, num_matches = 0;
 	long flags = 0, offset = 0;
 	zval *pattern = NULL, *matches = NULL, *match_array = NULL, **target_matches = NULL;
 	bool was_empty = false;
@@ -376,9 +376,22 @@ PHP_FUNCTION(re2_match_all)
 		}
 	}
 
-	start_pos = offset;
-	end_pos = subject_piece.size();
-	while (start_pos < end_pos && re2->Match(subject_piece, start_pos, end_pos, RE2::UNANCHORED, pieces, argc)) {
+	start_ptr = subject_piece.data();
+	ptr = start_ptr + offset;
+	end_ptr = subject_piece.end();
+	end_pos = subject_piece.size() - offset;
+	while (ptr < end_ptr && re2->Match(subject_piece, ptr - start_ptr, end_pos, RE2::UNANCHORED, pieces, argc)) {
+		if (pieces[0].begin() == last_ptr && pieces[0].size() == 0) {
+			/* allow only one empty match at end of last match, to mirror pcre */
+			if (was_empty) {
+				++ptr;
+				continue;
+			}
+			was_empty = true;
+		} else {
+			was_empty = false;
+		}
+
 		if (flags & RE2_SET_ORDER) {
 			/* initialise match arrays per result */
 			MAKE_STD_ZVAL(match_array);
@@ -388,7 +401,8 @@ PHP_FUNCTION(re2_match_all)
 		}
 
 		_php_re2_populate_matches(re2, target_matches, subject_piece, pieces, argc, flags);
-		start_pos += pieces[0].size() - 1;
+		ptr = pieces[0].end();
+		last_ptr = ptr;
 		++num_matches;
 	}
 

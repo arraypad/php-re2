@@ -21,6 +21,9 @@ var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTU
 
 echo "*** Testing re2_match_all(): offset capture, RE2_SET_ORDER\n";
 var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTURE | RE2_SET_ORDER)); print_r($matches);
+
+echo "*** Testing re2_match_all(): end with empty capture\n";
+var_dump(re2_match_all('Hello \w+ world|z*', $subject, $matches)); print_r($matches);
 ?>
 --EXPECTF--
 *** Testing re2_match_all(): 1 subpattern
@@ -214,6 +217,20 @@ Array
                     [1] => 40
                 )
 
+        )
+
+)
+*** Testing re2_match_all(): end with empty capture
+int(5)
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello regex world
+            [1] => 
+            [2] => Hello php world
+            [3] => 
+            [4] => Hello cpp world
         )
 
 )
