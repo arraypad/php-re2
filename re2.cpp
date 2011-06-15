@@ -260,7 +260,6 @@ static void _php_re2_populate_matches(RE2 *re2, zval **matches, re2::StringPiece
 		}
 
 		add_next_index_zval(flags & RE2_PATTERN_ORDER ? matches[j++] : *matches, piece);
-		piece = NULL;
 	}
 }
 /*	}}} */
@@ -369,13 +368,11 @@ PHP_FUNCTION(re2_match_all)
 				std::string name = iter->second;
 				add_assoc_zval_ex(matches, (const char *)name.c_str(), name.length() + 1, match_array);
 				match_arrays[j++] = match_array;
-				match_array = NULL;
 				MAKE_STD_ZVAL(match_array);
 				array_init(match_array);
 			}
 			add_next_index_zval(matches, match_array);
 			match_arrays[j++] = match_array;
-			match_array = NULL;
 		}
 	}
 
@@ -384,7 +381,6 @@ PHP_FUNCTION(re2_match_all)
 	while (start_pos < end_pos && re2->Match(subject_piece, start_pos, end_pos, RE2::UNANCHORED, pieces, argc)) {
 		if (flags & RE2_SET_ORDER) {
 			/* initialise match arrays per result */
-			match_array = NULL;
 			MAKE_STD_ZVAL(match_array);
 			array_init_size(match_array, num_groups);
 			add_next_index_zval(matches, match_array);
