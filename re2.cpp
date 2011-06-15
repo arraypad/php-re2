@@ -263,10 +263,13 @@ static void _php_re2_populate_matches(RE2 *re2, zval **matches, re2::StringPiece
 	}
 }
 
-static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out, const char *subject, long subject_len, long offset, int argc, long flags)
+static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out,
+	const char *subject, long subject_len, std::string *out, const char *replace, long replace_len,
+	int limit, long offset, int argc, long flags)
 {
 	const char *start_ptr, *ptr, *end_ptr, *last_ptr = NULL;
-	re2::StringPiece subject_piece = re2::StringPiece(subject);
+	re2::StringPiece subject_piece = re2::StringPiece(subject, subject_len);
+	re2::StringPiece replace_piece = re2::StringPiece(replace, replace_len);
 	re2::StringPiece pieces[++argc];
 	const std::map<int, std::string> named_groups = re2->CapturingGroupNames();
 	int num_groups = argc + named_groups.size();
@@ -279,9 +282,17 @@ static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out, c
 	end_ptr = subject_piece.end();
 	end_pos = subject_piece.size();
 	while (ptr < end_ptr && re2->Match(subject_piece, ptr - start_ptr, end_pos, RE2::UNANCHORED, pieces, argc)) {
+		if (out && ptr < pieces[0].begin()) {
+			out->append(ptr, pieces[0].begin() - ptr);
+		}
+
 		if (pieces[0].begin() == last_ptr && pieces[0].size() == 0) {
 			/* allow only one empty match at end of last match, to mirror pcre */
 			if (was_empty) {
+				if (out && ptr < end_ptr) {
+					out->append(ptr, 1);
+				}
+
 				++ptr;
 				continue;
 			}
@@ -294,14 +305,32 @@ static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out, c
 			/* initialise match arrays per result */
 			MAKE_STD_ZVAL(match_array);
 			array_init_size(match_array, num_groups);
-			add_next_index_zval(matches_out, match_array);
 			matches = &match_array;
+
+			if (matches_out) {
+				add_next_index_zval(matches_out, match_array);
+			}
 		}
 
-		_php_re2_populate_matches(re2, matches, subject_piece, pieces, argc, flags);
+		if (out) {
+			re2->Rewrite(out, replace_piece, pieces, argc);
+		}
+
+		if (matches) {
+			_php_re2_populate_matches(re2, matches, subject_piece, pieces, argc, flags);
+		}
+
 		ptr = pieces[0].end();
 		last_ptr = ptr;
 		++num_matches;
+
+		if (limit && num_matches == limit) {
+			break;
+		}
+	}
+
+	if (out && ptr < end_ptr) {
+		out->append(ptr, end_ptr - ptr);
 	}
 	
 	return num_matches;
@@ -415,7 +444,7 @@ PHP_FUNCTION(re2_match_all)
 		}
 	}
 
-	num_matches = _php_re2_match_common(re2, matches, matches_out, subject, subject_len, offset, argc, flags);
+	num_matches = _php_re2_match_common(re2, matches, matches_out, subject, subject_len, NULL, NULL, 0, 0, offset, argc, flags);
 
 	if (flags & RE2_PATTERN_ORDER) {
 		efree(matches);
@@ -430,9 +459,9 @@ PHP_FUNCTION(re2_match_all)
 PHP_FUNCTION(re2_replace)
 {
 	char *subject, *replace;
-	std::string subject_str, pattern_str, replace_str;
-	int subject_len, replace_len, i, argc;
-	long count, flags;
+	std::string pattern_str, out_str = "";
+	int subject_len, replace_len, argc, limit = 0;
+	long flags = RE2_REPLACE_GLOBAL, num_matches;
 	zval *pattern, *count_zv, *out;
 	RE2 *re2;
 
@@ -442,20 +471,16 @@ PHP_FUNCTION(re2_replace)
 
 	RE2_GET_PATTERN;
 
-	subject_str = std::string(subject);
-	replace_str = std::string(replace);
-
-	if (ZEND_NUM_ARGS() >= 4 && flags & RE2_REPLACE_FIRST) {
-		count = RE2::Replace(&subject_str, *re2, replace_str) ? 1 : 0;
-	} else {
-		count = RE2::GlobalReplace(&subject_str, *re2, replace_str);
+	if (ZEND_NUM_ARGS() > 3 && flags & RE2_REPLACE_FIRST) {
+		limit = 1;
 	}
+
+	num_matches = _php_re2_match_common(re2, NULL, NULL, subject, subject_len, &out_str, replace, replace_len, limit, 0, argc, flags);
+	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
 
 	if (ZEND_NUM_ARGS() == 5) {
-		ZVAL_LONG(count_zv, count);
+		ZVAL_LONG(count_zv, num_matches);
 	}
-
-	RETVAL_STRINGL(subject_str.c_str(), subject_str.length(), 1);
 }
 /*	}}} */
 
