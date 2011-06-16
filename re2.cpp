@@ -411,7 +411,7 @@ PHP_FUNCTION(re2_match)
 	char *subject;
 	re2::StringPiece subject_piece;
 	int subject_len, argc;
-	long flags, offset;
+	long flags = RE2_ANCHOR_NONE, offset = 0;
 	zval *pattern = NULL, *matches = NULL;
 	RE2 *re2;
 	RE2::Anchor anchor;
@@ -421,15 +421,6 @@ PHP_FUNCTION(re2_match)
 	}
 
 	RE2_GET_PATTERN;
-
-	if (ZEND_NUM_ARGS() < 4) {
-		/* default flags */
-		flags = RE2_ANCHOR_NONE;
-	}
-
-	if (ZEND_NUM_ARGS() < 5) {
-		offset = 0;
-	}
 
 	subject_piece = re2::StringPiece(subject);
 	anchor = _php_re2_get_anchor_from_flags(flags);
@@ -446,11 +437,7 @@ PHP_FUNCTION(re2_match)
 			RETVAL_FALSE;
 		}
 	} else {
-		if (re2->Match(subject_piece, offset, subject_piece.size(), anchor, NULL, 0)) {
-			RETVAL_TRUE;
-		} else {
-			RETVAL_FALSE;
-		}
+		RETVAL_BOOL(re2->Match(subject_piece, offset, subject_piece.size(), anchor, NULL, 0));
 	}
 	
 	RE2_FREE_PATTERN;
@@ -462,7 +449,7 @@ PHP_FUNCTION(re2_match)
 PHP_FUNCTION(re2_match_all)
 {
 	const char *subject;
-	int subject_len, argc, end_pos, num_matches = 0;
+	int subject_len, argc, num_matches = 0;
 	long flags = 0, offset = 0;
 	zval *pattern = NULL, *matches_out = NULL, *match_array = NULL, **matches = NULL;
 	RE2 *re2;
@@ -510,12 +497,11 @@ PHP_FUNCTION(re2_match_all)
 	}
 
 	num_matches = _php_re2_match_common(re2, matches, matches_out, subject, subject_len, NULL, NULL, NULL, 0, NULL, NULL, 0, offset, argc, flags);
+	RETVAL_LONG(num_matches);
 
 	if (flags & RE2_PATTERN_ORDER) {
 		efree(matches);
 	}
-
-	RETVAL_LONG(num_matches);
 	
 	RE2_FREE_PATTERN;
 }
@@ -651,7 +637,7 @@ PHP_FUNCTION(re2_grep)
 PHP_FUNCTION(re2_split)
 {
 	char *subject;
-	int subject_len, replace_len, argc;
+	int subject_len, argc;
 	long num_matches, limit = 0, flags = 0;
 	zval *pattern, *count_zv;
 	RE2 *re2;
@@ -683,7 +669,7 @@ PHP_FUNCTION(re2_quote)
 		RETURN_FALSE;
 	}
 
-	subject_str = std::string(subject);
+	subject_str = std::string(subject, subject_len);
 	out_str = RE2::QuoteMeta(subject);
 	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
 }
