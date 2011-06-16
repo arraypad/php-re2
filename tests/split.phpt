@@ -34,6 +34,18 @@ print_r(re2_split($re2_group, $subject, -1, RE2_SPLIT_DELIM_CAPTURE | RE2_SPLIT_
 echo "*** Testing RE2 split: offset capture\n";
 print_r(re2_split($re2, $subject, -1, RE2_SPLIT_OFFSET_CAPTURE));
 
+echo "*** Testing RE2 split: empty pattern\n";
+print_r(re2_split('', 'hello'));
+
+echo "*** Testing RE2 split: empty pattern & no empty\n";
+print_r(re2_split('', 'hello', -1, RE2_SPLIT_NO_EMPTY));
+
+echo "*** Testing RE2 split: partial empty pattern\n";
+print_r(re2_split('XX|', 'fooXXbar'));
+
+echo "*** Testing RE2 split: partial empty pattern with delim capture\n";
+print_r(re2_split('(XX|)', 'fooXXbar', -1, RE2_SPLIT_DELIM_CAPTURE));
+
 ?>
 --EXPECTF--
 *** Testing RE2 split: basic
@@ -217,4 +229,70 @@ Array
             [1] => 15
         )
 
+)
+*** Testing RE2 split: empty pattern
+Array
+(
+    [0] => 
+    [1] => h
+    [2] => 
+    [3] => e
+    [4] => 
+    [5] => l
+    [6] => 
+    [7] => l
+    [8] => 
+    [9] => o
+    [10] => 
+)
+*** Testing RE2 split: empty pattern & no empty
+Array
+(
+    [0] => h
+    [1] => e
+    [2] => l
+    [3] => l
+    [4] => o
+)
+*** Testing RE2 split: partial empty pattern
+Array
+(
+    [0] => 
+    [1] => f
+    [2] => 
+    [3] => o
+    [4] => 
+    [5] => o
+    [6] => XX
+    [7] => b
+    [8] => 
+    [9] => a
+    [10] => 
+    [11] => r
+    [12] => 
+)
+*** Testing RE2 split: partial empty pattern with delim capture
+Array
+(
+    [0] => 
+    [1] => 
+    [2] => f
+    [3] => 
+    [4] => 
+    [5] => o
+    [6] => 
+    [7] => 
+    [8] => o
+    [9] => 
+    [10] => XX
+    [11] => 
+    [12] => b
+    [13] => 
+    [14] => 
+    [15] => a
+    [16] => 
+    [17] => 
+    [18] => r
+    [19] => 
+    [20] => 
 )

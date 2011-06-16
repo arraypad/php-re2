@@ -318,8 +318,14 @@ static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out,
 				add_next_index_zval(out_array, piece);
 			}
 		} else if (out_array && !(flags & RE2_SPLIT_NO_EMPTY)) {
-			RE2_MATCH_TO_ZVAL_PIECE(ptr, 0, ptr - start_ptr);
-			add_next_index_zval(out_array, piece);
+			/* fudge for re2_split with empty pattern */
+			if (was_empty && !(flags & RE2_SPLIT_DELIM_CAPTURE) && (ptr != last_ptr || ptr == start_ptr)) {
+				RE2_MATCH_TO_ZVAL_PIECE(pieces[0].data(), pieces[0].size(), ptr - start_ptr);
+				add_next_index_zval(out_array, piece);
+			} else if (pieces[0].size()) {
+				RE2_MATCH_TO_ZVAL_PIECE(ptr, 0, ptr - start_ptr);
+				add_next_index_zval(out_array, piece);
+			}
 		}
 
 		if (pieces[0].begin() == last_ptr && pieces[0].size() == 0) {
@@ -328,13 +334,24 @@ static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out,
 				if (ptr < end_ptr) {
 					if (out) {
 						out->append(ptr, 1);
-					} else if (out_array && flags & RE2_SPLIT_DELIM_CAPTURE) {
+					} else if (out_array) {
 						RE2_MATCH_TO_ZVAL_PIECE(ptr, 1, ptr - start_ptr);
 						add_next_index_zval(out_array, piece);
 					}
 				}
 
 				++ptr;
+
+				if (out_array && ptr == end_ptr && !(flags & RE2_SPLIT_NO_EMPTY)) {
+					/* fudge for re2_split with empty pattern */
+					RE2_MATCH_TO_ZVAL_PIECE(ptr, 0, ptr - start_ptr);
+					add_next_index_zval(out_array, piece);
+
+					if (flags & RE2_SPLIT_DELIM_CAPTURE) {
+						RE2_MATCH_TO_ZVAL_PIECE(ptr, 0, ptr - start_ptr);
+						add_next_index_zval(out_array, piece);
+					}
+				}
 				continue;
 			}
 			was_empty = true;
