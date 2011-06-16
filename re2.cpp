@@ -551,6 +551,7 @@ PHP_FUNCTION(re2_match)
 		RETURN_FALSE;
 	}
 
+	RETVAL_FALSE;
 	RE2_GET_PATTERN;
 
 	subject_piece = re2::StringPiece(subject);
@@ -589,6 +590,7 @@ PHP_FUNCTION(re2_match_all)
 		RETURN_FALSE;
 	}
 
+	RETVAL_FALSE;
 	RE2_GET_PATTERN;
 
 	if (ZEND_NUM_ARGS() < 4 || !(flags & RE2_SET_ORDER)) {
