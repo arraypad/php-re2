@@ -197,29 +197,6 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 }
 /* }}} */
 
-#define RE2_GET_PATTERN \
-	bool was_new = false; \
-	if (Z_TYPE_P(pattern) == IS_STRING) { \
-		re2 = new RE2(Z_STRVAL_P(pattern)); \
-		was_new = true; \
-	} else if (Z_TYPE_P(pattern) == IS_OBJECT && instanceof_function(Z_OBJCE_P(pattern), php_re2_class_entry TSRMLS_CC)) { \
-		re2_object *obj = (re2_object *)zend_object_store_get_object(pattern TSRMLS_CC); \
-		re2 = obj->re2; \
-	} else { \
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Pattern must be a string or an RE2 object"); \
-		RETURN_FALSE; \
-	} \
-	argc = re2->NumberOfCapturingGroups(); \
-	if (argc == -1) { \
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern"); \
-		RETURN_FALSE; \
-	} \
-
-#define RE2_FREE_PATTERN \
-	if (was_new) { \
-		delete re2; \
-	}
-
 /* {{{ constants */
 #define RE2_ANCHOR_NONE				0
 #define RE2_ANCHOR_START			1
@@ -418,6 +395,143 @@ static long _php_re2_match_common(RE2 *re2, zval **matches, zval *matches_out,
 	
 	return num_matches;
 }
+
+#define RE2_ENSURE_ARRAY(name) \
+	if (Z_TYPE_P(name##s) == IS_ARRAY) { \
+		name##_array = name##s; \
+		name##_count = zend_hash_num_elements(Z_ARRVAL_P(name##_array)); \
+		zend_hash_internal_pointer_reset(Z_ARRVAL_P(name##_array)); \
+	} else { \
+		MAKE_STD_ZVAL(name##_array); \
+		array_init_size(name##_array, 1); \
+		Z_ADDREF_P(name##s); \
+		add_next_index_zval(name##_array, name##s); \
+		created_##name##_array = true; \
+	}
+
+#define RE2_FREE_ARRAY(name) \
+	if (created_##name##_array) { \
+		zval_ptr_dtor(&name##_array); \
+	}
+
+#define RE2_FREE_PATTERN \
+	if (was_new) { \
+		delete re2; \
+	}
+
+#define RE2_GET_PATTERN \
+	bool was_new = false; \
+	if (Z_TYPE_P(pattern) == IS_STRING) { \
+		re2 = new RE2(Z_STRVAL_P(pattern)); \
+		was_new = true; \
+	} else if (Z_TYPE_P(pattern) == IS_OBJECT && instanceof_function(Z_OBJCE_P(pattern), php_re2_class_entry TSRMLS_CC)) { \
+		re2_object *obj = (re2_object *)zend_object_store_get_object(pattern TSRMLS_CC); \
+		re2 = obj->re2; \
+	} else { \
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Pattern must be a string or an RE2 object"); \
+		return; \
+	} \
+	argc = re2->NumberOfCapturingGroups(); \
+	if (argc == -1) { \
+		RE2_FREE_PATTERN; \
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern"); \
+		return; \
+	}
+
+static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_value,
+	int *count, long limit, long flags, bool is_filter,
+	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache)
+{
+	int argc, pattern_i = 0, replace_i = 0, pattern_count = 1, replace_count = 1, replace_len;
+	RE2 *re2;
+	std::string out_str;
+	zval *pattern_array = NULL, *replace_array = NULL, **pattern_ptr, *pattern = NULL, **replace_ptr = NULL;
+	bool created_pattern_array = false, created_replace_array = false;
+	char *replace_str;
+	long num_matches;
+
+	RE2_ENSURE_ARRAY(pattern);
+
+	if (!replace_fci) {
+		RE2_ENSURE_ARRAY(replace);
+	}
+
+	while (zend_hash_get_current_data(Z_ARRVAL_P(pattern_array), (void **)&pattern_ptr) == SUCCESS) {
+		pattern = *pattern_ptr;
+		RE2_GET_PATTERN;
+
+		if (replace_fci || zend_hash_get_current_data(Z_ARRVAL_P(replace_array), (void **)&replace_ptr) == FAILURE) {
+			replace_str = "";
+			replace_len = 0;
+		} else {
+			replace_str = Z_STRVAL_PP(replace_ptr);
+			replace_len = Z_STRLEN_PP(replace_ptr);
+		}
+
+		out_str = "";
+		num_matches = _php_re2_match_common(re2, NULL, NULL, Z_STRVAL_P(subject), Z_STRLEN_P(subject),
+			&out_str, NULL, replace_str, replace_len, replace_fci, replace_fci_cache, limit, 0, argc, flags);
+
+		if (num_matches) {
+			*count += num_matches;
+			efree(Z_STRVAL_P(subject));
+			ZVAL_STRINGL(subject, out_str.c_str(), out_str.length(), 1);
+		}
+
+		RE2_FREE_PATTERN;
+		if (++pattern_i <= pattern_count) {
+			zend_hash_move_forward(Z_ARRVAL_P(pattern_array));
+		}
+
+		if (replace_array && !created_replace_array && ++replace_i <= replace_count) {
+			zend_hash_move_forward(Z_ARRVAL_P(replace_array));
+		}
+	}
+
+	RE2_FREE_ARRAY(pattern);
+	RE2_FREE_ARRAY(replace);
+
+	Z_TYPE_P(return_value) = IS_STRING;
+	ZVAL_STRINGL(return_value, Z_STRVAL_P(subject), Z_STRLEN_P(subject), 1);
+}
+
+static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *return_value,
+	zval *count_zv, long limit, long flags, bool is_filter,
+	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache)
+{
+	zval **subject_ptr, *subject_return = NULL;
+	int count = 0, total_count = 0;
+
+	if (Z_TYPE_P(subjects) == IS_ARRAY) {
+		array_init(return_value);
+		zend_hash_internal_pointer_reset(Z_ARRVAL_P(subjects));
+		while (zend_hash_get_current_data(Z_ARRVAL_P(subjects), (void **)&subject_ptr) == SUCCESS) {
+			MAKE_STD_ZVAL(subject_return);
+			_php_re2_replace_subject(patterns, *subject_ptr, subject_return, &count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache);
+
+			if (!is_filter || count) {
+				total_count += count;
+				add_next_index_zval(return_value, subject_return); /* todo: handle assoc */
+			} else {
+				zval_dtor(subject_return);
+			}
+	
+			subject_return = NULL;
+			zend_hash_move_forward(Z_ARRVAL_P(subjects));
+		}
+	} else {
+		_php_re2_replace_subject(patterns, subjects, return_value, &total_count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache);
+
+		if (is_filter && !total_count) {
+			RETVAL_NULL();
+		}
+	}
+
+	if (count_zv) {
+		ZVAL_LONG(count_zv, total_count);
+	}
+}
+
 /*	}}} */
 
 /*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE [, int $offset = 0]]])
@@ -524,62 +638,36 @@ PHP_FUNCTION(re2_match_all)
 }
 /*	}}} */
 
-/*	{{{ proto string re2_replace(mixed $pattern, string $replacement, string $subject [, int $limit = -1 [, int &$count]])
+/*	{{{ proto string re2_replace(mixed $pattern, mixed $replacement, mixed $subject [, int $limit = -1 [, int &$count]])
 	Replaces all matches of the pattern with the replacement. */
 PHP_FUNCTION(re2_replace)
 {
-	char *subject, *replace;
-	std::string pattern_str, out_str = "";
-	int subject_len, replace_len, argc;
-	long num_matches, limit = 0;
-	zval *pattern, *count_zv, *out;
-	RE2 *re2;
+	long limit = 0, flags = 0;
+	zval *patterns, *replaces, *subjects, *count_zv = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zss|lz", &pattern, &replace, &replace_len, &subject, &subject_len, &limit, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zzz|lz", &patterns, &replaces, &subjects, &limit, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RE2_GET_PATTERN;
-
-	num_matches = _php_re2_match_common(re2, NULL, NULL, subject, subject_len, &out_str, NULL, replace, replace_len, NULL, NULL, limit, 0, argc, 0);
-	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
-
-	if (ZEND_NUM_ARGS() == 5) {
-		ZVAL_LONG(count_zv, num_matches);
-	}
-	
-	RE2_FREE_PATTERN;
+	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, replaces, NULL, NULL);
 }
 /*	}}} */
 
-/*	{{{ proto string re2_replace_callback(mixed $pattern, mixed $callback, string $subject [, int $limit = -1 [, int &$count]])
+/*	{{{ proto string re2_replace_callback(mixed $pattern, mixed $callback, mixed $subject [, int $limit = -1 [, int &$count]])
 	Replaces all matches of the pattern with the value returned by the replacement callback. */
 PHP_FUNCTION(re2_replace_callback)
 {
-	char *subject;
-	std::string pattern_str, out_str = "";
-	int subject_len, argc;
-	long num_matches, limit = 0;
-	zval *pattern, *count_zv, *out;
+	zval *patterns, *subjects, *count_zv = NULL;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
-	RE2 *re2;
-	long flags = RE2_SET_ORDER;
+	long limit = 0, flags = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zfs|lz", &pattern, &fci, &fci_cache, &subject, &subject_len, &limit, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zfz|lz", &patterns, &fci, &fci_cache, &subjects, &limit, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
-	RE2_GET_PATTERN;
-
-	num_matches = _php_re2_match_common(re2, NULL, NULL, subject, subject_len, &out_str, NULL, NULL, 0, &fci, &fci_cache, limit, 0, argc, flags);
-	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
-
-	if (ZEND_NUM_ARGS() == 5) {
-		ZVAL_LONG(count_zv, num_matches);
-	}
-	
-	RE2_FREE_PATTERN;
+	flags |= RE2_SET_ORDER;
+	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, NULL, &fci, &fci_cache);
 }
 /*	}}} */
 
@@ -672,7 +760,6 @@ PHP_FUNCTION(re2_split)
 	RE2_FREE_PATTERN;
 }
 /*	}}} */
-
 
 /*	{{{	proto string re2_quote(string $subject)
 	Escapes all potentially meaningful regexp characters in the subject. */

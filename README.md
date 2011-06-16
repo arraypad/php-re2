@@ -25,11 +25,11 @@ Returns whether the pattern matches the subject.
 
 Returns how many times the pattern matched the subject.
 
-#### string re2_replace(mixed $pattern, string $replacement, string $subject [, int $limit = -1 [, int &$count]])
+#### string re2_replace(mixed $pattern, mixed $replacement, mixed $subject [, int $limit = -1 [, int &$count]])
 
 Replaces all matches of the pattern with the replacement.
 
-#### string re2_replace_callback(mixed $pattern, mixed $callback, string $subject [, int $limit = -1 [, int &$count]])
+#### string re2_replace_callback(mixed $pattern, mixed $callback, mixed $subject [, int $limit = -1 [, int &$count]])
 
 Replaces all matches of the pattern with the value returned by the replacement callback.
 
