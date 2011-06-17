@@ -438,6 +438,11 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Pattern must be a string or an RE2 object"); \
 		return; \
 	} \
+	if (!re->ok()) { \
+		RE2_FREE_PATTERN; \
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern"); \
+		return; \
+	} \
 	argc = re->NumberOfCapturingGroups(); \
 	if (argc == -1) { \
 		RE2_FREE_PATTERN; \
@@ -591,12 +596,12 @@ PHP_FUNCTION(re2_match)
 			zval_dtor(matches);
 			array_init_size(matches, argc);
 			_php_re2_populate_matches(re, &matches, subject_piece, pieces, argc, flags);
-			RETVAL_TRUE;
+			RETVAL_LONG(1);
 		} else {
-			RETVAL_FALSE;
+			RETVAL_LONG(0);
 		}
 	} else {
-		RETVAL_BOOL(re->Match(subject_piece, offset, subject_piece.size(), anchor, NULL, 0));
+		RETVAL_LONG(re->Match(subject_piece, offset, subject_piece.size(), anchor, NULL, 0));
 	}
 	
 	RE2_FREE_PATTERN;

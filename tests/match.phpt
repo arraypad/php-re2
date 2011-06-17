@@ -60,31 +60,31 @@ var_dump(re2_match('(foo)|(bar)(z*)baz', 'barbazbla', $matches, RE2_OFFSET_CAPTU
 ?>
 --EXPECTF--
 *** Testing re2_match(): no subpatterns, positive (default) unanchored match
-bool(true)
+int(1)
 *** Testing re2_match(): no subpatterns, negative (default) unanchored match
-bool(false)
+int(0)
 *** Testing re2_match(): no subpatterns, positive (explicit) unanchored match
-bool(true)
+int(1)
 *** Testing re2_match(): no subpatterns, negative (explicit) unanchored match
-bool(false)
+int(0)
 *** Testing re2_match(): no subpatterns, positive ANCHOR_BOTH
-bool(true)
+int(1)
 *** Testing re2_match(): no subpatterns, negative ANCHOR_BOTH
-bool(false)
+int(0)
 *** Testing re2_match(): no subpatterns, positive ANCHOR_START
-bool(true)
+int(1)
 *** Testing re2_match(): no subpatterns, negative ANCHOR_START
-bool(false)
+int(0)
 *** Testing re2_match(): subpattern used but no matches arguments passed
-bool(true)
+int(1)
 *** Testing re2_match(): offset
-bool(true)
+int(1)
 array(1) {
   [0]=>
   string(5) "regex"
 }
 *** Testing re2_match(): 1 subpattern
-bool(true)
+int(1)
 array(2) {
   [0]=>
   string(17) "Hello regex world"
@@ -92,7 +92,7 @@ array(2) {
   string(5) "regex"
 }
 *** Testing re2_match(): 3 subpatterns
-bool(true)
+int(1)
 array(4) {
   [0]=>
   string(17) "Hello regex world"
@@ -104,7 +104,7 @@ array(4) {
   string(5) "world"
 }
 *** Testing re2_match(): named groups
-bool(true)
+int(1)
 array(6) {
   [0]=>
   string(17) "Hello regex world"
@@ -120,7 +120,7 @@ array(6) {
   string(5) "world"
 }
 *** Testing re2_match(): 1 subpattern & offset capture
-bool(true)
+int(1)
 array(2) {
   [0]=>
   array(2) {
@@ -138,7 +138,7 @@ array(2) {
   }
 }
 *** Testing re2_match(): offset & offset capture
-bool(false)
+int(0)
 array(2) {
   [0]=>
   array(2) {
@@ -156,7 +156,7 @@ array(2) {
   }
 }
 *** Testing re2_match(): named groups & offset capture
-bool(true)
+int(1)
 array(6) {
   [0]=>
   array(2) {
@@ -202,7 +202,7 @@ array(6) {
   }
 }
 *** Testing re2_match(): absent subpattern
-bool(true)
+int(1)
 array(3) {
   [0]=>
   string(6) "barbaz"
@@ -212,7 +212,7 @@ array(3) {
   string(3) "bar"
 }
 *** Testing re2_match(): absent subpattern, zero width subpattern & offset capture
-bool(true)
+int(1)
 array(4) {
   [0]=>
   array(2) {

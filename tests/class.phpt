@@ -22,7 +22,7 @@ object(RE2)#1 (1) {
   }
 }
 *** Testing RE2 class: match
-bool(true)
+int(1)
 array(2) {
   [0]=>
   string(11) "Hello regex"

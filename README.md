@@ -17,7 +17,7 @@ The main differences are:
 * Pattern delimiters (the "/" in "/foo/") are not required.
 * The functions which accept a pattern will take either a string or an RE2 object for the pattern.
 
-#### bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE [, int $offset = 0]]])
+#### int re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE [, int $offset = 0]]])
 
 Returns whether the pattern matches the subject.
 
