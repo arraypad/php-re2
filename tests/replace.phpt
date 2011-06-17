@@ -24,11 +24,22 @@ var_dump(re2_replace('\w+', 'foo', 'Hello regex world', 2, $count), $count);
 echo "*** Testing re2_replace(): limit 2 no count\n";
 var_dump(re2_replace('\w+', 'foo', 'Hello regex world', 2));
 
+echo "*** Testing re2_replace(): subject separation\n";
+$s = 'abc';
+var_dump(re2_replace('a', 'A', $s), $s);
+
+echo "*** Testing re2_replace(): subject array separation\n";
+$s = array('abc');
+var_dump(re2_replace('a', 'A', $s), $s);
+
 echo "*** Testing re2_replace(): subject array\n";
 var_dump(re2_replace('a', 'A', array('abc')));
 
 echo "*** Testing re2_replace(): subject array 2\n";
 var_dump(re2_replace('a', 'A', array('abc', 'cba')));
+
+echo "*** Testing re2_replace(): subject array 2 weird keys\n";
+var_dump(re2_replace('a', 'A', array('foo' => 'abc', 42 => 'cba')));
 
 echo "*** Testing re2_replace(): pattern array\n";
 var_dump(re2_replace(array('a'), 'A', 'abc'));
@@ -70,6 +81,18 @@ string(13) "foo foo world"
 int(2)
 *** Testing re2_replace(): limit 2 no count
 string(13) "foo foo world"
+*** Testing re2_replace(): subject separation
+string(3) "Abc"
+string(3) "abc"
+*** Testing re2_replace(): subject array separation
+array(1) {
+  [0]=>
+  string(3) "Abc"
+}
+array(1) {
+  [0]=>
+  string(3) "abc"
+}
 *** Testing re2_replace(): subject array
 array(1) {
   [0]=>
@@ -80,6 +103,13 @@ array(2) {
   [0]=>
   string(3) "Abc"
   [1]=>
+  string(3) "cbA"
+}
+*** Testing re2_replace(): subject array 2 weird keys
+array(2) {
+  ["foo"]=>
+  string(3) "Abc"
+  [42]=>
   string(3) "cbA"
 }
 *** Testing re2_replace(): pattern array

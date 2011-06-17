@@ -464,6 +464,9 @@ static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return
 		RE2_ENSURE_ARRAY(replace);
 	}
 
+	Z_ADDREF_P(subject);
+	SEPARATE_ZVAL(&subject);
+
 	while (zend_hash_get_current_data(Z_ARRVAL_P(pattern_array), (void **)&pattern_ptr) == SUCCESS) {
 		pattern = *pattern_ptr;
 		RE2_GET_PATTERN;
@@ -501,6 +504,7 @@ static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return
 
 	Z_TYPE_P(return_value) = IS_STRING;
 	ZVAL_STRINGL(return_value, Z_STRVAL_P(subject), Z_STRLEN_P(subject), 1);
+	zval_ptr_dtor(&subject);
 }
 /*	}}} */
 
@@ -521,11 +525,21 @@ static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *retu
 			_php_re2_replace_subject(patterns, *subject_ptr, subject_return, &count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache);
 
 			if (!is_filter || count) {
+				char *string_key = NULL;
+				ulong num_key;
+
 				total_count += count;
-				add_next_index_zval(return_value, subject_return); /* todo: handle assoc */
-			} else {
-				zval_ptr_dtor(&subject_return);
+				Z_ADDREF_P(subject_return);
+				switch (zend_hash_get_current_key(Z_ARRVAL_P(subjects), &string_key, &num_key, 0)) {
+					case HASH_KEY_IS_STRING:
+						add_assoc_zval_ex(return_value, (const char *)string_key, strlen(string_key) + 1, subject_return);
+						break;
+					case HASH_KEY_IS_LONG:
+						zend_hash_index_update(Z_ARRVAL_P(return_value), num_key, &subject_return, sizeof(zval *), NULL);
+						break;
+				}
 			}
+			zval_ptr_dtor(&subject_return);
 	
 			subject_return = NULL;
 			zend_hash_move_forward(Z_ARRVAL_P(subjects));
