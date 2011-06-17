@@ -29,7 +29,7 @@ echo "*** Testing RE2 option: posix_syntax\n";
 testOption('PosixSyntax', '\w+', 'Hello regex world');
 
 echo "*** Testing RE2 option: longest_match\n";
-testOption('LongestMatch', '(\w+)', 'a aa aaa', 1);
+testOption('LongestMatch', 'a?|(a*)', 'aa', 1, 1);
 
 echo "*** Testing RE2 option: log_errors\n";
 testOption('LogErrors', '\X', 'Hello regex world');
@@ -78,14 +78,14 @@ array(2) {
   [0]=>
   string(1) "a"
   [1]=>
-  string(1) "a"
+  string(0) ""
 }
 int(1)
 array(2) {
   [0]=>
-  string(3) "aaa"
+  string(2) "aa"
   [1]=>
-  string(3) "aaa"
+  string(2) "aa"
 }
 *** Testing RE2 option: log_errors
 
