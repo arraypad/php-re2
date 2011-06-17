@@ -76,6 +76,7 @@ const zend_function_entry re2_functions[] = {
 	PHP_FE(re2_match_all, arginfo_re2_match_all)
 	PHP_FE(re2_replace, arginfo_re2_replace)
 	PHP_FE(re2_replace_callback, arginfo_re2_replace)
+	PHP_FE(re2_filter, arginfo_re2_replace)
 	PHP_FE(re2_grep, arginfo_re2_grep)
 	PHP_FE(re2_split, arginfo_re2_split)
 	PHP_FE(re2_quote, arginfo_re2_one_arg)
@@ -492,7 +493,10 @@ static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return
 	RE2_FREE_ARRAY(replace);
 
 	Z_TYPE_P(return_value) = IS_STRING;
-	ZVAL_STRINGL(return_value, Z_STRVAL_P(subject), Z_STRLEN_P(subject), 1);
+
+	if (!is_filter || count) {
+		ZVAL_STRINGL(return_value, Z_STRVAL_P(subject), Z_STRLEN_P(subject), 1);
+	}
 }
 
 static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *return_value,
@@ -507,13 +511,14 @@ static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *retu
 		zend_hash_internal_pointer_reset(Z_ARRVAL_P(subjects));
 		while (zend_hash_get_current_data(Z_ARRVAL_P(subjects), (void **)&subject_ptr) == SUCCESS) {
 			MAKE_STD_ZVAL(subject_return);
+			count = 0;
 			_php_re2_replace_subject(patterns, *subject_ptr, subject_return, &count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache);
 
 			if (!is_filter || count) {
 				total_count += count;
 				add_next_index_zval(return_value, subject_return); /* todo: handle assoc */
 			} else {
-				zval_dtor(subject_return);
+				zval_ptr_dtor(&subject_return);
 			}
 	
 			subject_return = NULL;
@@ -652,6 +657,21 @@ PHP_FUNCTION(re2_replace)
 	}
 
 	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, replaces, NULL, NULL);
+}
+/*	}}} */
+
+/*	{{{ proto string re2_filter(mixed $pattern, mixed $replacement, mixed $subject [, int $limit = -1 [, int &$count]])
+	Replaces all matches of the pattern with the replacement. */
+PHP_FUNCTION(re2_filter)
+{
+	long limit = 0, flags = 0;
+	zval *patterns, *replaces, *subjects, *count_zv = NULL;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zzz|lz", &patterns, &replaces, &subjects, &limit, &count_zv) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 1, replaces, NULL, NULL);
 }
 /*	}}} */
 

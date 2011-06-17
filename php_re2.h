@@ -44,6 +44,7 @@ PHP_FUNCTION(re2_match);
 PHP_FUNCTION(re2_match_all);
 PHP_FUNCTION(re2_replace);
 PHP_FUNCTION(re2_replace_callback);
+PHP_FUNCTION(re2_filter);
 PHP_FUNCTION(re2_grep);
 PHP_FUNCTION(re2_split);
 PHP_FUNCTION(re2_quote);

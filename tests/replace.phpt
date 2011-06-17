@@ -104,4 +104,4 @@ array(2) {
   [1]=>
   string(3) "cBA"
 }
-int(6)
+int(4)
