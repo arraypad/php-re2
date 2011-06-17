@@ -60,6 +60,9 @@ var_dump(re2_match('(foo)|(bar)(z*)baz', 'barbazbla', $matches, RE2_OFFSET_CAPTU
 echo "*** Testing re2_match(): bad flags\n";
 var_dump(re2_match('Hello (\w+) world', 'Hello regex world!', $matches, RE2_PATTERN_ORDER | RE2_SPLIT_NO_EMPTY | RE2_GREP_INVERT), $matches);
 
+echo "*** Testing re2_match(): >10 subpatterns\n";
+var_dump(re2_match('Hello (a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)(m)', 'Hello abcdefghijklm', $matches), $matches);
+
 ?>
 --EXPECTF--
 *** Testing re2_match(): no subpatterns, positive (default) unanchored match
@@ -253,4 +256,36 @@ array(2) {
   string(17) "Hello regex world"
   [1]=>
   string(5) "regex"
+}
+*** Testing re2_match(): >10 subpatterns
+int(1)
+array(14) {
+  [0]=>
+  string(19) "Hello abcdefghijklm"
+  [1]=>
+  string(1) "a"
+  [2]=>
+  string(1) "b"
+  [3]=>
+  string(1) "c"
+  [4]=>
+  string(1) "d"
+  [5]=>
+  string(1) "e"
+  [6]=>
+  string(1) "f"
+  [7]=>
+  string(1) "g"
+  [8]=>
+  string(1) "h"
+  [9]=>
+  string(1) "i"
+  [10]=>
+  string(1) "j"
+  [11]=>
+  string(1) "k"
+  [12]=>
+  string(1) "l"
+  [13]=>
+  string(1) "m"
 }

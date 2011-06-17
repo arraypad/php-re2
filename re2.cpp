@@ -268,6 +268,45 @@ static void _php_re2_populate_matches(RE2 *re, zval **matches, re2::StringPiece 
 }
 /*	}}} */
 
+/*	_php2_re2_get_backref() {{{
+	Copied completely from ext/pcre/pcre.c, preg_get_backref */
+static int _php_re2_get_backref(const char **str, int *backref)
+{
+	register char in_brace = 0;
+	register const char *walk = *str;
+
+	if (walk[1] == 0)
+		return 0;
+
+	if (*walk == '$' && walk[1] == '{') {
+		in_brace = 1;
+		walk++;
+	}
+	walk++;
+
+	if (*walk >= '0' && *walk <= '9') {
+		*backref = *walk - '0';
+		walk++;
+	} else
+		return 0;
+
+	if (*walk && *walk >= '0' && *walk <= '9') {
+		*backref = *backref * 10 + *walk - '0';
+		walk++;
+	}
+
+	if (in_brace) {
+		if (*walk == 0 || *walk != '}')
+			return 0;
+		else
+			walk++;
+	}
+
+	*str = walk;
+	return 1;
+}
+/*	}}} */
+
 /* _php2_re2_match_common() {{{ */
 static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 	const char *subject, long subject_len, std::string *out, zval *out_array,
@@ -276,7 +315,6 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 {
 	const char *start_ptr, *ptr, *end_ptr, *last_ptr = NULL;
 	re2::StringPiece subject_piece = re2::StringPiece(subject, subject_len);
-	re2::StringPiece replace_piece = re2::StringPiece(replace, replace_len);
 	re2::StringPiece pieces[++argc];
 	const std::map<int, std::string> named_groups = re->CapturingGroupNames();
 	int num_groups = argc + named_groups.size();
@@ -372,7 +410,28 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 				efree(retval_ptr);
 				zval_ptr_dtor(matches);
 			} else {
-				re->Rewrite(out, replace_piece, pieces, argc);
+				const char *walk = replace, *end = replace + replace_len;
+				char walk_last = 0;
+				int n;
+
+				while (walk < end) {
+					if (*walk == '\\' || *walk == '$') {
+						if (walk_last == '\\') {
+							++walk;
+							walk_last = 0;
+							continue;
+						}
+						if (_php_re2_get_backref(&walk, &n)) {
+							if (n <= argc && pieces[n].size() > 0) {
+								out->append(pieces[n].data(), pieces[n].size());
+							}
+							continue;
+						}
+					}
+					out->push_back(*walk);
+					walk_last = *walk;
+					++walk;
+				}
 			}
 		} else if (out_array && flags & RE2_SPLIT_DELIM_CAPTURE) {
 			for (int i = 1; i < argc; i++) {

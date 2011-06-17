@@ -62,6 +62,18 @@ var_dump(re2_replace(array('a', 'b'), array('A', 'B'), array('abc')));
 echo "*** Testing re2_replace(): pattern array & replace array & subject array 2 & count\n";
 var_dump(re2_replace(array('a', 'b'), array('A', 'B'), array('abc', 'cba'), -1, $count), $count);
 
+echo "*** Testing re2_replace(): 13 subpatterns & 1 unfilled\n";
+var_dump(re2_replace('Hello (a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)(m)', 'Goodbye \1\2\3\4\5\6\7\8\9\10\11\12\13\14', 'Hello abcdefghijklm'));
+
+echo "*** Testing re2_replace(): $ subpatterns\n";
+var_dump(re2_replace('Hello (world)', 'Goodbye $1', 'Hello world'));
+
+echo "*** Testing re2_replace(): \${n} subpatterns\n";
+var_dump(re2_replace('Hello (world)42', 'Goodbye ${1}42', 'Hello world42'));
+
+echo "*** Testing re2_replace(): fake subpatterns\n";
+var_dump(re2_replace('Hello (world)42', 'Goodbye ${a} \a \\\1 ${999} $\{1}', 'Hello world42'));
+
 ?>
 --EXPECTF--
 *** Testing re2_replace(): basic
@@ -135,3 +147,11 @@ array(2) {
   string(3) "cBA"
 }
 int(4)
+*** Testing re2_replace(): 13 subpatterns & 1 unfilled
+string(21) "Goodbye abcdefghijklm"
+*** Testing re2_replace(): $ subpatterns
+string(13) "Goodbye world"
+*** Testing re2_replace(): ${n} subpatterns
+string(15) "Goodbye world42"
+*** Testing re2_replace(): fake subpatterns
+string(31) "Goodbye ${a} \a \1 ${999} $\{1}"
