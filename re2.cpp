@@ -595,6 +595,8 @@ PHP_FUNCTION(re2_match)
 		if (re->Match(subject_piece, offset, subject_piece.size(), anchor, pieces, argc)) {
 			zval_dtor(matches);
 			array_init_size(matches, argc);
+			flags |= RE2_SET_ORDER;
+			flags &= ~RE2_PATTERN_ORDER;
 			_php_re2_populate_matches(re, &matches, subject_piece, pieces, argc, flags);
 			RETVAL_LONG(1);
 		} else {
@@ -659,6 +661,8 @@ PHP_FUNCTION(re2_match_all)
 			add_next_index_zval(matches_out, match_array);
 			match_arrays[j++] = match_array;
 		}
+
+		flags &= ~RE2_SET_ORDER;
 	}
 
 	num_matches = _php_re2_match_common(re, matches, matches_out, subject, subject_len, NULL, NULL, NULL, 0, NULL, NULL, 0, offset, argc, flags);

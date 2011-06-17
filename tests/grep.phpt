@@ -28,6 +28,9 @@ print_r(re2_grep('non-matching', $input));
 echo "*** Testing RE2 grep: invalid input\n";
 print_r(re2_grep($re2, "foobar"));
 
+echo "*** Testing RE2 grep: bad flags\n";
+print_r(re2_grep($re2, $input, RE2_PATTERN_ORDER | RE2_SPLIT_NO_EMPTY));
+
 ?>
 --EXPECTF--
 *** Testing RE2 grep: positive
@@ -67,3 +70,10 @@ Array
 *** Testing RE2 grep: invalid input
 
 Warning: re2_grep() expects parameter 2 to be array, string given in %s on line %d
+*** Testing RE2 grep: bad flags
+Array
+(
+    [0] => Hello regex world
+    [1] => Hello php world
+    [bar] => Hello cpp
+)

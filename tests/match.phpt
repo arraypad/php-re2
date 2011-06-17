@@ -57,6 +57,9 @@ var_dump(re2_match('(foo)|(bar)baz', 'barbazbla', $matches), $matches);
 echo "*** Testing re2_match(): absent subpattern, zero width subpattern & offset capture\n";
 var_dump(re2_match('(foo)|(bar)(z*)baz', 'barbazbla', $matches, RE2_OFFSET_CAPTURE), $matches);
 
+echo "*** Testing re2_match(): bad flags\n";
+var_dump(re2_match('Hello (\w+) world', 'Hello regex world!', $matches, RE2_PATTERN_ORDER | RE2_SPLIT_NO_EMPTY | RE2_GREP_INVERT), $matches);
+
 ?>
 --EXPECTF--
 *** Testing re2_match(): no subpatterns, positive (default) unanchored match
@@ -242,4 +245,12 @@ array(4) {
     [1]=>
     int(3)
   }
+}
+*** Testing re2_match(): bad flags
+int(1)
+array(2) {
+  [0]=>
+  string(17) "Hello regex world"
+  [1]=>
+  string(5) "regex"
 }

@@ -24,6 +24,10 @@ var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_OFFSET_CAPTU
 
 echo "*** Testing re2_match_all(): end with empty capture\n";
 var_dump(re2_match_all('Hello \w+ world|z*', $subject, $matches)); print_r($matches);
+
+echo "*** Testing re2_match_all(): bad flags\n";
+var_dump(re2_match_all('Hello (\w+) world', $subject, $matches, RE2_SPLIT_NO_EMPTY | RE2_GREP_INVERT | RE2_SET_ORDER | RE2_PATTERN_ORDER)); print_r($matches);
+
 ?>
 --EXPECTF--
 *** Testing re2_match_all(): 1 subpattern
@@ -231,6 +235,25 @@ Array
             [2] => Hello php world
             [3] => 
             [4] => Hello cpp world
+        )
+
+)
+*** Testing re2_match_all(): bad flags
+int(3)
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello regex world
+            [1] => Hello php world
+            [2] => Hello cpp world
+        )
+
+    [1] => Array
+        (
+            [0] => regex
+            [1] => php
+            [2] => cpp
         )
 
 )
