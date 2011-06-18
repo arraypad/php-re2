@@ -579,7 +579,7 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 /* _php2_re2_replace_subject() {{{ */
 static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_value,
 	int *count, long limit, long flags, bool is_filter,
-	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache)
+	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache TSRMLS_DC)
 {
 	int argc, pattern_i = 0, replace_i = 0, pattern_count = 1, replace_count = 1, replace_len;
 	RE2 *re;
@@ -612,7 +612,7 @@ static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return
 
 		out_str = "";
 		num_matches = _php_re2_match_common(re, NULL, NULL, Z_STRVAL_P(subject), Z_STRLEN_P(subject),
-			&out_str, NULL, replace_str, replace_len, replace_fci, replace_fci_cache, limit, 0, argc, flags);
+			&out_str, NULL, replace_str, replace_len, replace_fci, replace_fci_cache, limit, 0, argc, flags TSRMLS_CC);
 
 		if (num_matches) {
 			*count += num_matches;
@@ -642,7 +642,7 @@ static void _php_re2_replace_subject(zval *patterns, zval *subject, zval *return
 /* _php2_re2_replace_subjects() {{{ */
 static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *return_value,
 	zval *count_zv, long limit, long flags, bool is_filter,
-	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache)
+	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache TSRMLS_DC)
 {
 	zval **subject_ptr, *subject_return = NULL;
 	int count = 0, total_count = 0;
@@ -653,7 +653,7 @@ static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *retu
 		while (zend_hash_get_current_data(Z_ARRVAL_P(subjects), (void **)&subject_ptr) == SUCCESS) {
 			MAKE_STD_ZVAL(subject_return);
 			count = 0;
-			_php_re2_replace_subject(patterns, *subject_ptr, subject_return, &count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache);
+			_php_re2_replace_subject(patterns, *subject_ptr, subject_return, &count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache TSRMLS_CC);
 
 			if (!is_filter || count) {
 				char *string_key = NULL;
@@ -676,7 +676,7 @@ static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *retu
 			zend_hash_move_forward(Z_ARRVAL_P(subjects));
 		}
 	} else {
-		_php_re2_replace_subject(patterns, subjects, return_value, &total_count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache);
+		_php_re2_replace_subject(patterns, subjects, return_value, &total_count, limit, flags, is_filter, replaces, replace_fci, replace_fci_cache TSRMLS_CC);
 
 		if (is_filter && !total_count) {
 			efree(Z_STRVAL_P(return_value));
@@ -791,7 +791,7 @@ PHP_FUNCTION(re2_match_all)
 		flags &= ~RE2_SET_ORDER;
 	}
 
-	num_matches = _php_re2_match_common(re, matches, matches_out, subject, subject_len, NULL, NULL, NULL, 0, NULL, NULL, 0, offset, argc, flags);
+	num_matches = _php_re2_match_common(re, matches, matches_out, subject, subject_len, NULL, NULL, NULL, 0, NULL, NULL, 0, offset, argc, flags TSRMLS_CC);
 	RETVAL_LONG(num_matches);
 
 	if (flags & RE2_PATTERN_ORDER) {
@@ -813,7 +813,7 @@ PHP_FUNCTION(re2_replace)
 		RETURN_FALSE;
 	}
 
-	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, replaces, NULL, NULL);
+	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, replaces, NULL, NULL TSRMLS_CC);
 }
 /*	}}} */
 
@@ -828,7 +828,7 @@ PHP_FUNCTION(re2_filter)
 		RETURN_FALSE;
 	}
 
-	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 1, replaces, NULL, NULL);
+	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 1, replaces, NULL, NULL TSRMLS_CC);
 }
 /*	}}} */
 
@@ -846,7 +846,7 @@ PHP_FUNCTION(re2_replace_callback)
 	}
 
 	flags |= RE2_SET_ORDER;
-	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, NULL, &fci, &fci_cache);
+	_php_re2_replace_subjects(patterns, subjects, return_value, count_zv, limit, flags, 0, NULL, &fci, &fci_cache TSRMLS_CC);
 }
 /*	}}} */
 
@@ -934,7 +934,7 @@ PHP_FUNCTION(re2_split)
 
 	array_init(return_value);
 	--limit; /* limit includes "rest of subject" */
-	num_matches = _php_re2_match_common(re, NULL, NULL, subject, subject_len, NULL, return_value, NULL, 0, NULL, NULL, limit, 0, argc, flags);
+	num_matches = _php_re2_match_common(re, NULL, NULL, subject, subject_len, NULL, return_value, NULL, 0, NULL, NULL, limit, 0, argc, flags TSRMLS_CC);
 
 	RE2_FREE_PATTERN;
 }
