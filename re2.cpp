@@ -134,6 +134,12 @@ struct re2_object {
 	RE2 *re;
 };
 
+struct re2_options_object {
+	zend_object std;
+	RE2::Options *options;
+};
+
+
 void re2_free_storage(void *object TSRMLS_DC)
 {
 	re2_object *obj = (re2_object *)object;
@@ -145,17 +151,20 @@ void re2_free_storage(void *object TSRMLS_DC)
 	efree(obj);
 }
 
-zend_object_value re2_create_handler(zend_class_entry *type TSRMLS_DC)
+zend_object_value re2_object_new_ex(zend_class_entry *type, re2_object **ptr TSRMLS_DC)
 {
 	zval *tmp;
 	zend_object_value retval;
+	re2_object *obj;
 
-	re2_object *obj = (re2_object *)emalloc(sizeof(re2_object));
+	obj = (re2_object *)emalloc(sizeof(re2_object));
 	memset(obj, 0, sizeof(re2_object));
-	obj->std.ce = type;
 
-	ALLOC_HASHTABLE(obj->std.properties);
-	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
+	if (ptr) {
+		*ptr = obj;
+	}
+
+	zend_object_std_init(&obj->std, type TSRMLS_CC);
 	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_free_storage, NULL TSRMLS_CC);
@@ -163,10 +172,31 @@ zend_object_value re2_create_handler(zend_class_entry *type TSRMLS_DC)
 	return retval;
 }
 
-struct re2_options_object {
-	zend_object std;
-	RE2::Options *options;
-};
+zend_object_value re2_object_new(zend_class_entry *type TSRMLS_DC)
+{
+	return re2_object_new_ex(type, NULL TSRMLS_CC);
+}
+
+zend_object_value re2_object_clone(zval *this_ptr TSRMLS_DC)
+{
+	re2_options_object *options_obj = NULL;
+	zval *options = NULL;
+	re2_object *new_obj = NULL;
+	re2_object *old_obj = (re2_object *)zend_object_store_get_object(this_ptr TSRMLS_CC);
+	zend_object_value retval = re2_object_new_ex(old_obj->std.ce, &new_obj TSRMLS_CC);
+
+	zend_objects_clone_members(&new_obj->std, retval, &old_obj->std, Z_OBJ_HANDLE_P(this_ptr) TSRMLS_CC);
+
+	new_obj->re = new RE2(old_obj->re->pattern());
+	/*
+	options = zend_read_property(old_obj->std.ce, this_ptr, "options", strlen("options"), 1 TSRMLS_CC);
+	options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
+	new_obj->re = new RE2(old_obj->re->pattern(), *options_obj->options);
+	Z_DELREF_P(options);
+	*/
+	
+	return retval;
+}
 
 void re2_options_free_storage(void *object TSRMLS_DC)
 {
@@ -179,7 +209,7 @@ void re2_options_free_storage(void *object TSRMLS_DC)
 	efree(obj);
 }
 
-zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
+zend_object_value re2_options_object_new_ex(zend_class_entry *type, re2_options_object **ptr TSRMLS_DC)
 {
 	zval *tmp;
 	zend_object_value retval;
@@ -188,12 +218,47 @@ zend_object_value re2_options_create_handler(zend_class_entry *type TSRMLS_DC)
 	memset(obj, 0, sizeof(re2_options_object));
 	obj->std.ce = type;
 
+	if (ptr) {
+		*ptr = obj;
+	}
+
 	ALLOC_HASHTABLE(obj->std.properties);
 	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
 	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_options_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &re2_options_object_handlers;
+	return retval;
+}
+
+zend_object_value re2_options_object_new(zend_class_entry *type TSRMLS_DC)
+{
+	return re2_options_object_new_ex(type, NULL TSRMLS_CC);
+}
+
+zend_object_value re2_options_object_clone(zval *this_ptr TSRMLS_DC)
+{
+	RE2::Options *options = NULL;
+	re2_options_object *new_obj = NULL;
+	re2_options_object *old_obj = (re2_options_object *)zend_object_store_get_object(this_ptr TSRMLS_CC);
+	zend_object_value retval = re2_options_object_new_ex(old_obj->std.ce, &new_obj TSRMLS_CC);
+
+	zend_objects_clone_members(&new_obj->std, retval, &old_obj->std, Z_OBJ_HANDLE_P(this_ptr) TSRMLS_CC);
+	new_obj->options = new RE2::Options();
+
+	/* grrr.. why is Copy() private? */
+	new_obj->options->set_encoding(old_obj->options->encoding());
+	new_obj->options->set_posix_syntax(old_obj->options->posix_syntax());
+	new_obj->options->set_longest_match(old_obj->options->longest_match());
+	new_obj->options->set_log_errors(old_obj->options->log_errors());
+	new_obj->options->set_max_mem(old_obj->options->max_mem());
+	new_obj->options->set_literal(old_obj->options->literal());
+	new_obj->options->set_never_nl(old_obj->options->never_nl());
+	new_obj->options->set_case_sensitive(old_obj->options->case_sensitive());
+	new_obj->options->set_perl_classes(old_obj->options->perl_classes());
+	new_obj->options->set_word_boundary(old_obj->options->word_boundary());
+	new_obj->options->set_one_line(old_obj->options->one_line());
+	
 	return retval;
 }
 /* }}} */
@@ -941,7 +1006,6 @@ PHP_METHOD(RE2, __construct)
 PHP_METHOD(RE2, getOptions)
 {
 	zval *options = zend_read_property(php_re2_class_entry, getThis(), "options", strlen("options"), 0 TSRMLS_CC);
-	Z_ADDREF_P(options);
 	RETURN_ZVAL(options, 1, 0);
 }
 /*	}}} */
@@ -1150,16 +1214,16 @@ PHP_MINIT_FUNCTION(re2)
 	INIT_CLASS_ENTRY(ce, PHP_RE2_CLASS_NAME, re2_class_functions);
 	php_re2_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
 	zend_declare_property_null(php_re2_class_entry, "options", strlen("options"), ZEND_ACC_PROTECTED TSRMLS_CC);
-	php_re2_class_entry->create_object = re2_create_handler;
+	php_re2_class_entry->create_object = re2_object_new;
 	memcpy(&re2_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
-	re2_object_handlers.clone_obj = NULL;
+	re2_object_handlers.clone_obj = re2_object_clone;
 
 	/* register RE2_Options class */
 	INIT_CLASS_ENTRY(ce, PHP_RE2_OPTIONS_CLASS_NAME, re2_options_class_functions);
 	php_re2_options_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
-	php_re2_options_class_entry->create_object = re2_options_create_handler;
+	php_re2_options_class_entry->create_object = re2_options_object_new;
 	memcpy(&re2_options_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
-	re2_options_object_handlers.clone_obj = NULL;
+	re2_options_object_handlers.clone_obj = re2_options_object_clone;
 
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);

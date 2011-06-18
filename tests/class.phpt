@@ -14,6 +14,22 @@ var_dump(re2_match_all($re2, 'Hello regex Hello PHP', $matches), $matches);
 
 echo "*** Testing RE2 class: replace\n";
 var_dump(re2_replace($re2, 'Goodbye \1', 'Hello regex world'));
+
+echo "*** Testing RE2 class: clone RE2\n";
+$newRe = clone $re2;
+exit;
+var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+
+echo "*** Testing RE2 class: re-use RE2_Options\n";
+$options = $re2->getOptions();
+$newRe = new RE2('[\w ]+', $options);
+var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+
+echo "*** Testing RE2 class: clone RE2_Options\n";
+$options = clone $re2->getOptions();
+$newRe = new RE2('[\w ]+', $options);
+var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+
 ?>
 --EXPECTF--
 object(RE2)#1 (1) {
@@ -49,3 +65,23 @@ array(2) {
 }
 *** Testing RE2 class: replace
 string(19) "Goodbye regex world"
+*** Testing RE2 class: clone RE2
+int(1)
+array(2) {
+  [0]=>
+  string(11) "Hello regex"
+  [1]=>
+  string(5) "regex"
+}
+*** Testing RE2 class: re-use RE2_Options
+int(1)
+array(1) {
+  [0]=>
+  string(17) "Hello regex world"
+}
+*** Testing RE2 class: clone RE2_Options
+int(1)
+array(1) {
+  [0]=>
+  string(17) "Hello regex world"
+}
