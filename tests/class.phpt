@@ -6,6 +6,9 @@ re2 - class
 $re2 = new RE2('Hello (\w+)');
 var_dump($re2);
 
+echo "*** Testing RE2 class: getPattern()\n";
+var_dump($re2->getPattern());
+
 echo "*** Testing RE2 class: match\n";
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
@@ -17,7 +20,6 @@ var_dump(re2_replace($re2, 'Goodbye \1', 'Hello regex world'));
 
 echo "*** Testing RE2 class: clone RE2\n";
 $newRe = clone $re2;
-exit;
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
 
 echo "*** Testing RE2 class: re-use RE2_Options\n";
@@ -37,6 +39,8 @@ object(RE2)#1 (1) {
   object(RE2_Options)#2 (0) {
   }
 }
+*** Testing RE2 class: getPattern()
+string(11) "Hello (\w+)"
 *** Testing RE2 class: match
 int(1)
 array(2) {

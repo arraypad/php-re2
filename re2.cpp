@@ -91,6 +91,7 @@ zend_class_entry *php_re2_class_entry;
 static zend_function_entry re2_class_functions[] = {
 	PHP_ME(RE2, __construct, arginfo_re2_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(RE2, getOptions, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2, getPattern, NULL, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -1000,6 +1001,18 @@ PHP_METHOD(RE2, __construct)
 /*	}}} */
 
 /* {{{ RE2 options */
+
+/*	{{{ proto RE2_Options RE2::getPattern()
+	Returns the pattern used by this instance. */
+PHP_METHOD(RE2, getPattern)
+{
+	std::string pattern;
+	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+
+	pattern = obj->re->pattern();
+	RETURN_STRINGL(pattern.c_str(), pattern.length(), 1);
+}
+/*	}}} */
 
 /*	{{{ proto RE2_Options RE2::getOptions()
 	Returns the RE2_Options for this instance. */

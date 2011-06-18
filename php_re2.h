@@ -51,6 +51,7 @@ PHP_FUNCTION(re2_quote);
 
 PHP_METHOD(RE2, __construct);
 PHP_METHOD(RE2, getOptions);
+PHP_METHOD(RE2, getPattern);
 
 PHP_METHOD(RE2_Options, __construct);
 PHP_METHOD(RE2_Options, getEncoding);
