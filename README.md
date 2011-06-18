@@ -8,6 +8,73 @@ php-re2 is a PHP extension which provides an interface to Google's [RE2 regular-
 > 
 > Unlike most automata-based engines, RE2 implements almost all the common Perl and PCRE features and syntactic sugars. It also finds the leftmost-first match, the same match that Perl would, and can return submatch information. The one significant exception is that RE2 drops support for backreferences and generalized zero-width assertions, because they cannot be implemented efficiently. The [syntax page](http://code.google.com/p/re2/wiki/Syntax) gives full details.
 
+Usage examples
+==============
+
+````php
+<?php
+
+$subject = 'Hello regex world';
+
+re2_match_all('\w+', $subject, $matches);
+print_r($matches);
+/*
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello
+            [1] => regex
+            [2] => world
+        )
+
+)
+*/
+
+re2_match_all('\w(\w+)', $subject, $matches, RE2_SET_ORDER);
+print_r($matches);
+/*
+Array
+(
+    [0] => Array
+        (
+            [0] => Hello
+            [1] => ello
+        )
+
+    [1] => Array
+        (
+            [0] => regex
+            [1] => egex
+        )
+
+    [2] => Array
+        (
+            [0] => world
+            [1] => orld
+        )
+
+)
+*/
+
+echo re2_replace('\w+', 'foo', $subject), "\n";
+/*
+foo foo foo
+*/
+
+echo re2_replace('\w+', 'foo', $subject, 1), "\n";
+/*
+foo regex world
+*/
+
+echo re2_replace_callback('\w+', function($m) { return strtoupper($m[0]); }, $subject, 2), "\n";
+/*
+HELLO REGEX world
+*/
+
+?>
+````
+
 Functions
 =========
 The interface is intended to follow ext/pcre (`preg_match()` et al) as closely as possible.
@@ -53,6 +120,16 @@ Classes
 Represents a compiled regex pattern.
 
 #### RE2 RE2::__construct(string $pattern [, RE2_Options $options])
+
+Construct a new RE2 object.
+
+#### string RE2::getPattern()
+
+Returns the pattern.
+
+#### RE2_Options RE2::getOptions()
+
+Returns the options used for this pattern.
 
 ## RE2_Options
 

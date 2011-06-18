@@ -1003,7 +1003,7 @@ PHP_METHOD(RE2, __construct)
 
 /* {{{ RE2 options */
 
-/*	{{{ proto RE2_Options RE2::getPattern()
+/*	{{{ proto string RE2::getPattern()
 	Returns the pattern used by this instance. */
 PHP_METHOD(RE2, getPattern)
 {
