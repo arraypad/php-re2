@@ -92,6 +92,7 @@ static zend_function_entry re2_class_functions[] = {
 	PHP_ME(RE2, __construct, arginfo_re2_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(RE2, getOptions, NULL, ZEND_ACC_PUBLIC)
 	PHP_ME(RE2, getPattern, NULL, ZEND_ACC_PUBLIC)
+	PHP_MALIAS(RE2, __toString, getPattern, NULL, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 

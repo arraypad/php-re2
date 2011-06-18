@@ -9,6 +9,9 @@ var_dump($re2);
 echo "*** Testing RE2 class: getPattern()\n";
 var_dump($re2->getPattern());
 
+echo "*** Testing RE2 class: __toString()\n";
+var_dump((string)$re2);
+
 echo "*** Testing RE2 class: match\n";
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
@@ -40,6 +43,8 @@ object(RE2)#1 (1) {
   }
 }
 *** Testing RE2 class: getPattern()
+string(11) "Hello (\w+)"
+*** Testing RE2 class: __toString()
 string(11) "Hello (\w+)"
 *** Testing RE2 class: match
 int(1)
