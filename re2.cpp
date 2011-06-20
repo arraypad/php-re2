@@ -489,7 +489,7 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 							continue;
 						}
 						if (_php_re2_get_backref(&walk, &n)) {
-							if (n <= argc && pieces[n].size() > 0) {
+							if (n < argc && pieces[n].size() > 0) {
 								out->append(pieces[n].data(), pieces[n].size());
 							}
 							continue;
