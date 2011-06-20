@@ -65,7 +65,6 @@ PHP_METHOD(RE2_Options, getCaseSensitive);
 PHP_METHOD(RE2_Options, getPerlClasses);
 PHP_METHOD(RE2_Options, getWordBoundary);
 PHP_METHOD(RE2_Options, getOneLine);
-PHP_METHOD(RE2_Options, getOneLine);
 PHP_METHOD(RE2_Options, setEncoding);
 PHP_METHOD(RE2_Options, setMaxMem);
 PHP_METHOD(RE2_Options, setPosixSyntax);
@@ -76,7 +75,6 @@ PHP_METHOD(RE2_Options, setNeverNl);
 PHP_METHOD(RE2_Options, setCaseSensitive);
 PHP_METHOD(RE2_Options, setPerlClasses);
 PHP_METHOD(RE2_Options, setWordBoundary);
-PHP_METHOD(RE2_Options, setOneLine);
 PHP_METHOD(RE2_Options, setOneLine);
 
 PHP_MINIT_FUNCTION(re2);
