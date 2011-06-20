@@ -555,7 +555,8 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 #define RE2_GET_PATTERN \
 	bool was_new = false; \
 	if (Z_TYPE_P(pattern) == IS_STRING) { \
-		re = new RE2(Z_STRVAL_P(pattern)); \
+		std::string pattern_str = std::string(Z_STRVAL_P(pattern), Z_STRLEN_P(pattern)); \
+		re = new RE2(pattern_str); \
 		was_new = true; \
 	} else if (Z_TYPE_P(pattern) == IS_OBJECT && instanceof_function(Z_OBJCE_P(pattern), php_re2_class_entry TSRMLS_CC)) { \
 		re2_object *obj = (re2_object *)zend_object_store_get_object(pattern TSRMLS_CC); \
@@ -712,7 +713,7 @@ PHP_FUNCTION(re2_match)
 	RETVAL_FALSE;
 	RE2_GET_PATTERN;
 
-	subject_piece = re2::StringPiece(subject);
+	subject_piece = re2::StringPiece(subject, subject_len);
 	anchor = _php_re2_get_anchor_from_flags(flags);
 
 	if (ZEND_NUM_ARGS() > 2) {
@@ -888,7 +889,7 @@ PHP_FUNCTION(re2_grep)
 			convert_to_string(&subject);
 		}
 
-		subject_piece = re2::StringPiece(Z_STRVAL(subject));
+		subject_piece = re2::StringPiece(Z_STRVAL(subject), Z_STRLEN(subject));
 		did_match = re->Match(subject_piece, 0, Z_STRLEN(subject), anchor, NULL, 0);
 
 		if (did_match ^ invert) {
@@ -953,7 +954,7 @@ PHP_FUNCTION(re2_quote)
 	}
 
 	subject_str = std::string(subject, subject_len);
-	out_str = RE2::QuoteMeta(subject);
+	out_str = RE2::QuoteMeta(subject_str);
 	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
 }
 /*	}}} */
@@ -965,6 +966,7 @@ PHP_METHOD(RE2, __construct)
 	char *pattern;
 	int pattern_len;
 	zval *options;
+	std::string pattern_str;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|O", &pattern, &pattern_len, &options, php_re2_options_class_entry) == FAILURE) {
 		RETURN_NULL();
@@ -994,8 +996,9 @@ PHP_METHOD(RE2, __construct)
 	zend_update_property(php_re2_class_entry, getThis(), "options", strlen("options"), options TSRMLS_CC);
 
 	/* create re2 object */
+	pattern_str = std::string(pattern, pattern_len);
 	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
-	RE2 *re2_obj = new RE2(pattern, *options_obj->options);
+	RE2 *re2_obj = new RE2(pattern_str, *options_obj->options);
 	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->re = re2_obj;
 }
