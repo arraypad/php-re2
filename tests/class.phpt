@@ -1,5 +1,7 @@
 --TEST--
 re2 - class
+--SKIPIF--
+<?php include('skipif.inc'); ?>
 --FILE--
 <?php
 

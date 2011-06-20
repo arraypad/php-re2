@@ -1,5 +1,7 @@
 --TEST--
 re2 - re2_replace
+--SKIPIF--
+<?php include('skipif.inc'); ?>
 --FILE--
 <?php
 

@@ -1,5 +1,7 @@
 --TEST--
-re2 - grep
+re2 - re2_grep
+--SKIPIF--
+<?php include('skipif.inc'); ?>
 --FILE--
 <?php
 

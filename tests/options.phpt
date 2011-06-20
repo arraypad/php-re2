@@ -1,5 +1,7 @@
 --TEST--
 re2 - options
+--SKIPIF--
+<?php include('skipif.inc'); ?>
 --FILE--
 <?php
 

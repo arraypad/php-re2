@@ -1,5 +1,7 @@
 --TEST--
-re2 - split
+re2 - re2_split
+--SKIPIF--
+<?php include('skipif.inc'); ?>
 --FILE--
 <?php
 
