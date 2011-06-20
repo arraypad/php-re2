@@ -40,6 +40,9 @@ var_dump(re2_filter(array('a', 'b'), array('A', 'B'), 'aabc', 1));
 echo "*** Testing re2_filter(): pattern array & replace array & subject array 2/4 & count\n";
 var_dump(re2_filter(array('a', 'b'), array('A', 'B'), array('abc', 'cba', 'xyz', 'zyx'), -1, $count), $count);
 
+echo "*** Testing re2_filter(): invalid pattern\n";
+var_dump(re2_filter('\X+', '', 'Hello world42'));
+
 ?>
 --EXPECTF--
 *** Testing re2_filter(): basic
@@ -81,3 +84,8 @@ array(2) {
   string(3) "cBA"
 }
 int(4)
+*** Testing re2_filter(): invalid pattern
+re2/re2.cc:%d: Error parsing '\X+': invalid escape sequence: \X
+
+Warning: re2_filter(): Invalid pattern in %s/filter.php on line %d
+bool(false)

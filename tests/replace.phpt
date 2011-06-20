@@ -76,6 +76,12 @@ var_dump(re2_replace('Hello (world)42', 'Goodbye ${1}42', 'Hello world42'));
 echo "*** Testing re2_replace(): fake subpatterns\n";
 var_dump(re2_replace('Hello (world)42', 'Goodbye ${a} \a \\\1 ${999} $\{1}', 'Hello world42'));
 
+echo "*** Testing re2_replace(): invalid pattern\n";
+var_dump(re2_replace('\X+', '', 'Hello world42'));
+
+echo "*** Testing re2_replace(): invalid pattern array\n";
+var_dump(re2_replace(array('foo', '\X+'), '', 'Hello world42'));
+
 ?>
 --EXPECTF--
 *** Testing re2_replace(): basic
@@ -157,3 +163,13 @@ string(13) "Goodbye world"
 string(15) "Goodbye world42"
 *** Testing re2_replace(): fake subpatterns
 string(31) "Goodbye ${a} \a \1 ${999} $\{1}"
+*** Testing re2_replace(): invalid pattern
+re2/re2.cc:%d: Error parsing '\X+': invalid escape sequence: \X
+
+Warning: re2_replace(): Invalid pattern in %s/replace.php on line %d
+bool(false)
+*** Testing re2_replace(): invalid pattern array
+re2/re2.cc:%d: Error parsing '\X+': invalid escape sequence: \X
+
+Warning: re2_replace(): Invalid pattern in %s/replace.php on line %d
+bool(false)
