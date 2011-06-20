@@ -18,24 +18,44 @@ echo "*** Testing RE2 class: match\n";
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
 echo "*** Testing RE2 class: match_all\n";
+$matches = null;
 var_dump(re2_match_all($re2, 'Hello regex Hello PHP', $matches), $matches);
 
 echo "*** Testing RE2 class: replace\n";
 var_dump(re2_replace($re2, 'Goodbye \1', 'Hello regex world'));
 
 echo "*** Testing RE2 class: clone RE2\n";
+$matches = null;
 $newRe = clone $re2;
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
 
 echo "*** Testing RE2 class: re-use RE2_Options\n";
+$matches = null;
 $options = $re2->getOptions();
 $newRe = new RE2('[\w ]+', $options);
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
 
 echo "*** Testing RE2 class: clone RE2_Options\n";
+$matches = null;
 $options = clone $re2->getOptions();
 $newRe = new RE2('[\w ]+', $options);
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+
+echo "*** Testing RE2 class: change RE2_Options\n";
+$matches = null;
+$options = $re2->getOptions();
+$options->setPosixSyntax(true);
+$newRe = new RE2('[\w ]+', $options);
+var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
+
+echo "*** Testing RE2 class: clone and change RE2_Options\n";
+$matches = null;
+$options = clone $re2->getOptions();
+$options->setPosixSyntax(true);
+$newRe = new RE2('[\w ]+', $options);
+var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
 ?>
 --EXPECTF--
@@ -95,4 +115,30 @@ int(1)
 array(1) {
   [0]=>
   string(17) "Hello regex world"
+}
+*** Testing RE2 class: change RE2_Options
+re2/re2.cc:%d: Error parsing '[\w ]+': invalid escape sequence: \w
+
+Warning: re2_match(): Invalid pattern in %s/class.php on line %d
+bool(false)
+NULL
+int(1)
+array(2) {
+  [0]=>
+  string(11) "Hello regex"
+  [1]=>
+  string(5) "regex"
+}
+*** Testing RE2 class: clone and change RE2_Options
+re2/re2.cc:%d: Error parsing '[\w ]+': invalid escape sequence: \w
+
+Warning: re2_match(): Invalid pattern in %s/class.php on line %d
+bool(false)
+NULL
+int(1)
+array(2) {
+  [0]=>
+  string(11) "Hello regex"
+  [1]=>
+  string(5) "regex"
 }
