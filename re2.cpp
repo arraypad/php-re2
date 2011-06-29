@@ -13,6 +13,7 @@
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
   | Author: Arpad Ray <arpad@php.net>                                    |
+  | Author: Leif Jackson <ljackson@jjcons.com>                           |
   +----------------------------------------------------------------------+
 */
 
@@ -28,6 +29,7 @@ extern "C" {
 #include "php_re2.h"
 
 #include <re2/re2.h>
+#include <re2/set.h>
 #include <string>
 
 
@@ -66,6 +68,18 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_construct, 0, 0, 1)
 	ZEND_ARG_INFO(0, options)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_one_arg, 0, 0, 1)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_construct, 0, 0, 1)
+	ZEND_ARG_INFO(0, options)
+	ZEND_ARG_INFO(0, anchor)
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_add, 0, 0, 2)
+	ZEND_ARG_INFO(0, pattern)
+	ZEND_ARG_INFO(0, error)        
+ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_match, 0, 0, 2)
+	ZEND_ARG_INFO(0, subject)
+	ZEND_ARG_INFO(0, match_indexes)        
 ZEND_END_ARG_INFO()
 /* }}} */
 
@@ -125,11 +139,24 @@ static zend_function_entry re2_options_class_functions[] = {
 	PHP_ME(RE2_Options, setOneLine, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
+
+zend_class_entry *php_re2_set_class_entry;
+#define PHP_RE2_SET_CLASS_NAME "RE2_Set"
+
+static zend_function_entry re2_set_class_functions[] = {
+	PHP_ME(RE2_Set, __construct, arginfo_re2_set_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(RE2_Set, Add, arginfo_re2_set_add, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Set, Compile, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Set, Match, arginfo_re2_set_match, ZEND_ACC_PUBLIC)
+	{NULL, NULL, NULL}
+};
+
 /* }}} */
 
 /* {{{ RE2 object handlers */
 zend_object_handlers re2_object_handlers;
 zend_object_handlers re2_options_object_handlers;
+zend_object_handlers re2_set_object_handlers;
 
 struct re2_object {
 	zend_object std;
@@ -141,6 +168,10 @@ struct re2_options_object {
 	RE2::Options *options;
 };
 
+struct re2_set_object {
+	zend_object std;
+	RE2::Set *re2_set;
+};
 
 void re2_free_storage(void *object TSRMLS_DC)
 {
@@ -263,6 +294,45 @@ zend_object_value re2_options_object_clone(zval *this_ptr TSRMLS_DC)
 	
 	return retval;
 }
+
+void re2_set_free_storage(void *object TSRMLS_DC)
+{
+	re2_set_object *obj = (re2_set_object *)object;
+	delete obj->re2_set;
+
+	zend_hash_destroy(obj->std.properties);
+	FREE_HASHTABLE(obj->std.properties);
+
+	efree(obj);
+}
+
+zend_object_value re2_set_object_new_ex(zend_class_entry *type, re2_set_object **ptr TSRMLS_DC)
+{
+	zval *tmp;
+	zend_object_value retval;
+
+	re2_set_object *obj = (re2_set_object *)emalloc(sizeof(re2_set_object));
+	memset(obj, 0, sizeof(re2_set_object));
+	obj->std.ce = type;
+
+	if (ptr) {
+            *ptr = obj;
+	}
+
+	ALLOC_HASHTABLE(obj->std.properties);
+	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
+
+	retval.handle = zend_objects_store_put(obj, NULL, re2_set_free_storage, NULL TSRMLS_CC);
+	retval.handlers = &re2_set_object_handlers;
+	return retval;
+}
+
+zend_object_value re2_set_object_new(zend_class_entry *type TSRMLS_DC)
+{
+	return re2_set_object_new_ex(type, NULL TSRMLS_CC);
+}
+
 /* }}} */
 
 /* {{{ constants */
@@ -1234,6 +1304,107 @@ RE2_OPTION_BOOL_SETTER(OneLine, one_line);
 
 /* }}} */
 
+/* {{{ RE2_Set */
+
+/*	{{{ proto RE2_Set RE2_Set::__construct(RE2_Options $options, RE2_Anchor $anchor)
+	Construct a new RE2_Set object with options and anchor. */
+PHP_METHOD(RE2_Set, __construct)
+{
+	zval *options;
+        zval *anchor;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|O", &options, php_re2_options_class_entry) == FAILURE) {
+		RETURN_NULL();
+	}
+        
+	if (ZEND_NUM_ARGS() == 0) {
+		zval *ctor, unused;
+
+		/* create options */
+		MAKE_STD_ZVAL(options);
+		Z_TYPE_P(options) = IS_OBJECT;
+		object_init_ex(options, php_re2_options_class_entry);
+
+		MAKE_STD_ZVAL(ctor);
+		array_init_size(ctor, 2);
+		Z_ADDREF_P(options);
+		add_next_index_zval(ctor, options);
+		add_next_index_string(ctor, "__construct", 1);
+		if (call_user_function(&php_re2_options_class_entry->function_table, &options, ctor, &unused, 0, NULL TSRMLS_CC) == FAILURE) {
+			php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to construct RE2_Options");
+			RETURN_NULL();
+		}
+		zval_ptr_dtor(&ctor);
+		Z_DELREF_P(options);
+	}
+
+        //FIXME: handle 2nd arg of RE2_Anchor object...
+	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
+	RE2::Set *s = new RE2::Set(*options_obj->options, RE2::UNANCHORED);
+	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj->re2_set = s;
+}
+/*	}}} */
+
+/*	{{{ proto int RE2_Set::Add(string $pattern [, string &$error])
+	 */
+PHP_METHOD(RE2_Set, Add)
+{
+	char *pattern;
+	int pattern_len;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pattern, &pattern_len) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+        RETURN_LONG(obj->re2_set->Add(pattern, NULL)); //FIXME: support error string by ref
+}
+/*      }}} */
+
+/*	{{{ proto bool RE2_Set::Compile()
+	 */
+PHP_METHOD(RE2_Set, Compile)
+{
+	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+        RETURN_BOOL(obj->re2_set->Compile());
+}
+/*      }}} */
+
+/*	{{{ proto bool RE2_Set::Match(string $subject, array &$matching_indexs)
+	 */
+PHP_METHOD(RE2_Set, Match)
+{
+	char *subject;
+	int subject_len;
+        zval * matching_indexs_out = NULL;
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &subject, &subject_len, &matching_indexs_out) == FAILURE) {
+		RETURN_FALSE;
+	}
+
+	/* initialise output array */
+	if (matching_indexs_out != NULL) {
+		zval_dtor(matching_indexs_out);
+	}
+	array_init(matching_indexs_out);
+        std::vector<int> v;
+        
+	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+        bool found = obj->re2_set->Match(subject, &v);
+        
+        if(v.size()) {
+            for( std::vector<int>::iterator it=v.begin(); it!=v.end(); ++it ) {
+                add_next_index_long(matching_indexs_out, *it);
+            }
+        }
+        
+        RETURN_BOOL(found);
+}
+/*      }}} */
+
+/* }}} */
+
 /* {{{ re2_module_entry
  */
 zend_module_entry re2_module_entry = {
@@ -1280,6 +1451,13 @@ PHP_MINIT_FUNCTION(re2)
 	memcpy(&re2_options_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	re2_options_object_handlers.clone_obj = re2_options_object_clone;
 
+	/* register RE2_Set class */
+	INIT_CLASS_ENTRY(ce, PHP_RE2_SET_CLASS_NAME, re2_set_class_functions);
+	php_re2_set_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	php_re2_set_class_entry->create_object = re2_set_object_new;
+	memcpy(&re2_set_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
+//	re2_set_object_handlers.clone_obj = re2_set_object_clone;
+        
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_START", RE2_ANCHOR_START, CONST_CS | CONST_PERSISTENT);

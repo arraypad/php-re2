@@ -13,13 +13,14 @@
   | license@php.net so we can mail you a copy immediately.               |
   +----------------------------------------------------------------------+
   | Author: Arpad Ray <arpad@php.net>                                    |
+  | Author: Leif Jackson <ljackson@jjcons.com>                           |
   +----------------------------------------------------------------------+
 */
 
 #ifndef PHP_RE2_H
 #define PHP_RE2_H
 
-#define PHP_RE2_EXTVER "0.0.1-dev"
+#define PHP_RE2_EXTVER "0.0.2-dev"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,6 +77,11 @@ PHP_METHOD(RE2_Options, setCaseSensitive);
 PHP_METHOD(RE2_Options, setPerlClasses);
 PHP_METHOD(RE2_Options, setWordBoundary);
 PHP_METHOD(RE2_Options, setOneLine);
+
+PHP_METHOD(RE2_Set, __construct);
+PHP_METHOD(RE2_Set, Add);
+PHP_METHOD(RE2_Set, Compile);
+PHP_METHOD(RE2_Set, Match);
 
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);
