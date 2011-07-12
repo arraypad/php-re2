@@ -75,11 +75,11 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_construct, 0, 0, 1)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_add, 0, 0, 2)
 	ZEND_ARG_INFO(0, pattern)
-	ZEND_ARG_INFO(0, error)        
+	ZEND_ARG_INFO(0, error)
 ZEND_END_ARG_INFO()
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_match, 0, 0, 2)
 	ZEND_ARG_INFO(0, subject)
-	ZEND_ARG_INFO(0, match_indexes)        
+	ZEND_ARG_INFO(0, match_indexes)
 ZEND_END_ARG_INFO()
 /* }}} */
 
@@ -316,7 +316,7 @@ zend_object_value re2_set_object_new_ex(zend_class_entry *type, re2_set_object *
 	obj->std.ce = type;
 
 	if (ptr) {
-            *ptr = obj;
+		*ptr = obj;
 	}
 
 	ALLOC_HASHTABLE(obj->std.properties);
@@ -785,6 +785,36 @@ static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *retu
 
 /*	}}} */
 
+/*	{{{ options object helpers */
+/* static inline int _create_re2_options_object(zval *options) {{{ */
+static inline int _create_re2_options_object(zval *options)
+{
+	zval *ctor, unused;
+
+	MAKE_STD_ZVAL(ctor);
+	array_init_size(ctor, 2);
+	Z_ADDREF_P(options);
+	add_next_index_zval(ctor, options);
+	add_next_index_string(ctor, "__construct", 1);
+	if (call_user_function(&php_re2_options_class_entry->function_table, &options, ctor, &unused, 0, NULL TSRMLS_CC) == FAILURE) {
+		php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to construct RE2_Options");
+		return FAILURE;
+	}
+	zval_ptr_dtor(&ctor);
+	Z_DELREF_P(options);
+	return SUCCESS;
+}
+/* }}} */
+#define PHP_RE2_CREATE_OPTIONS_OBJECT  \
+	MAKE_STD_ZVAL(options); \
+	Z_TYPE_P(options) = IS_OBJECT; \
+	object_init_ex(options, php_re2_options_class_entry); \
+	if(_create_re2_options_object(options) == FAILURE) { \
+		RETURN_NULL(); \
+	} 
+
+/*	}}} */
+
 /*	{{{ proto bool re2_match(mixed $pattern, string $subject [, array &$matches [, int $flags = RE2_ANCHOR_NONE [, int $offset = 0]]])
 	Returns whether the pattern matches the subject.
 */
@@ -1081,24 +1111,7 @@ PHP_METHOD(RE2, __construct)
 	}
 
 	if (ZEND_NUM_ARGS() == 1) {
-		zval *ctor, unused;
-
-		/* create options */
-		MAKE_STD_ZVAL(options);
-		Z_TYPE_P(options) = IS_OBJECT;
-		object_init_ex(options, php_re2_options_class_entry);
-
-		MAKE_STD_ZVAL(ctor);
-		array_init_size(ctor, 2);
-		Z_ADDREF_P(options);
-		add_next_index_zval(ctor, options);
-		add_next_index_string(ctor, "__construct", 1);
-		if (call_user_function(&php_re2_options_class_entry->function_table, &options, ctor, &unused, 0, NULL TSRMLS_CC) == FAILURE) {
-			php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to construct RE2_Options");
-			RETURN_NULL();
-		}
-		zval_ptr_dtor(&ctor);
-		Z_DELREF_P(options);
+		PHP_RE2_CREATE_OPTIONS_OBJECT
 	}
 
 	zend_update_property(php_re2_class_entry, getThis(), "options", strlen("options"), options TSRMLS_CC);
@@ -1306,39 +1319,21 @@ RE2_OPTION_BOOL_SETTER(OneLine, one_line);
 
 /* {{{ RE2_Set */
 
-/*	{{{ proto RE2_Set RE2_Set::__construct(RE2_Options $options, RE2_Anchor $anchor)
+/*	{{{ proto RE2_Set RE2_Set::__construct([RE2_Options $options])
 	Construct a new RE2_Set object with options and anchor. */
 PHP_METHOD(RE2_Set, __construct)
 {
 	zval *options;
-        zval *anchor;
+	zval *anchor;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|O", &options, php_re2_options_class_entry) == FAILURE) {
 		RETURN_NULL();
 	}
-        
+		
 	if (ZEND_NUM_ARGS() == 0) {
-		zval *ctor, unused;
-
-		/* create options */
-		MAKE_STD_ZVAL(options);
-		Z_TYPE_P(options) = IS_OBJECT;
-		object_init_ex(options, php_re2_options_class_entry);
-
-		MAKE_STD_ZVAL(ctor);
-		array_init_size(ctor, 2);
-		Z_ADDREF_P(options);
-		add_next_index_zval(ctor, options);
-		add_next_index_string(ctor, "__construct", 1);
-		if (call_user_function(&php_re2_options_class_entry->function_table, &options, ctor, &unused, 0, NULL TSRMLS_CC) == FAILURE) {
-			php_error_docref(NULL TSRMLS_CC, E_ERROR, "Unable to construct RE2_Options");
-			RETURN_NULL();
-		}
-		zval_ptr_dtor(&ctor);
-		Z_DELREF_P(options);
+		PHP_RE2_CREATE_OPTIONS_OBJECT
 	}
 
-        //FIXME: handle 2nd arg of RE2_Anchor object...
 	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
 	RE2::Set *s = new RE2::Set(*options_obj->options, RE2::UNANCHORED);
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
@@ -1346,7 +1341,7 @@ PHP_METHOD(RE2_Set, __construct)
 }
 /*	}}} */
 
-/*	{{{ proto int RE2_Set::Add(string $pattern [, string &$error])
+/*	{{{ proto int RE2_Set::Add(string $pattern)
 	 */
 PHP_METHOD(RE2_Set, Add)
 {
@@ -1358,18 +1353,18 @@ PHP_METHOD(RE2_Set, Add)
 	}
 
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-        RETURN_LONG(obj->re2_set->Add(pattern, NULL)); //FIXME: support error string by ref
+	RETURN_LONG(obj->re2_set->Add(pattern, NULL)); //FIXME: support error string by ref
 }
-/*      }}} */
+/*	  }}} */
 
 /*	{{{ proto bool RE2_Set::Compile()
 	 */
 PHP_METHOD(RE2_Set, Compile)
 {
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-        RETURN_BOOL(obj->re2_set->Compile());
+	RETURN_BOOL(obj->re2_set->Compile());
 }
-/*      }}} */
+/*	  }}} */
 
 /*	{{{ proto bool RE2_Set::Match(string $subject, array &$matching_indexs)
 	 */
@@ -1377,7 +1372,7 @@ PHP_METHOD(RE2_Set, Match)
 {
 	char *subject;
 	int subject_len;
-        zval * matching_indexs_out = NULL;
+	zval * matching_indexs_out = NULL;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &subject, &subject_len, &matching_indexs_out) == FAILURE) {
 		RETURN_FALSE;
@@ -1388,20 +1383,20 @@ PHP_METHOD(RE2_Set, Match)
 		zval_dtor(matching_indexs_out);
 	}
 	array_init(matching_indexs_out);
-        std::vector<int> v;
-        
+	std::vector<int> v;
+		
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-        bool found = obj->re2_set->Match(subject, &v);
-        
-        if(v.size()) {
-            for( std::vector<int>::iterator it=v.begin(); it!=v.end(); ++it ) {
-                add_next_index_long(matching_indexs_out, *it);
-            }
-        }
-        
-        RETURN_BOOL(found);
+	bool found = obj->re2_set->Match(subject, &v);
+		
+	if(v.size()) {
+		for( std::vector<int>::iterator it=v.begin(); it!=v.end(); ++it ) {
+			add_next_index_long(matching_indexs_out, *it);
+		}
+	}
+	
+	RETURN_BOOL(found);
 }
-/*      }}} */
+/*	  }}} */
 
 /* }}} */
 
@@ -1457,7 +1452,7 @@ PHP_MINIT_FUNCTION(re2)
 	php_re2_set_class_entry->create_object = re2_set_object_new;
 	memcpy(&re2_set_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 //	re2_set_object_handlers.clone_obj = re2_set_object_clone;
-        
+		
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_START", RE2_ANCHOR_START, CONST_CS | CONST_PERSISTENT);
