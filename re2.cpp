@@ -1376,7 +1376,7 @@ PHP_METHOD(RE2_Set, add)
 PHP_METHOD(RE2_Set, compile)
 {
 	long ret;
-	zval *hasPattern = zend_read_property(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 1 TSRMLS_CC);
+	zval *hasPattern = zend_read_property(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 0 TSRMLS_CC);
 
 	if (!Z_BVAL_P(hasPattern)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set has no patterns");
@@ -1389,7 +1389,7 @@ PHP_METHOD(RE2_Set, compile)
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	ret = obj->re2_set->Compile();
 
-	if (ret) {
+	if (ret >= 0) {
 		zend_update_property_bool(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 1 TSRMLS_CC);
 	} else {
 		/* todo: handle compile failure */
@@ -1406,7 +1406,7 @@ PHP_METHOD(RE2_Set, match)
 	char *subject;
 	int subject_len;
 	zval *matching_indexs_out = NULL;
-	zval *isCompiled = zend_read_property(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 1 TSRMLS_CC);
+	zval *isCompiled = zend_read_property(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 0 TSRMLS_CC);
 
 	if (!Z_BVAL_P(isCompiled)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set is not compiled");
