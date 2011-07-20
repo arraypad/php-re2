@@ -1350,13 +1350,22 @@ PHP_METHOD(RE2_Set, add)
 {
 	char *pattern;
 	int pattern_len;
+	long ret;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pattern, &pattern_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-	RETURN_LONG(obj->re2_set->Add(pattern, NULL)); //FIXME: support error string by ref
+	ret = obj->re2_set->Add(pattern, NULL);
+
+	if (ret == -1) {
+		/* todo: handle invalid pattern */
+	} else {
+		zend_update_property_bool(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 1 TSRMLS_CC);
+	}
+
+	RETURN_LONG(ret);
 }
 /*	}}} */
 
@@ -1364,8 +1373,27 @@ PHP_METHOD(RE2_Set, add)
 	 */
 PHP_METHOD(RE2_Set, compile)
 {
+	long ret;
+	zval *hasPattern = zend_read_property(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 1 TSRMLS_CC);
+
+	if (!Z_BVAL_P(hasPattern)) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set has no patterns");
+		Z_DELREF_P(hasPattern);
+		RETURN_FALSE;
+	}
+
+	Z_DELREF_P(hasPattern);
+	
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-	RETURN_BOOL(obj->re2_set->Compile());
+	ret = obj->re2_set->Compile();
+
+	if (ret) {
+		zend_update_property_bool(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 1 TSRMLS_CC);
+	} else {
+		/* todo: handle compile failure */
+	}
+
+	RETURN_BOOL(ret);
 }
 /*	}}} */
 
@@ -1375,7 +1403,16 @@ PHP_METHOD(RE2_Set, match)
 {
 	char *subject;
 	int subject_len;
-	zval * matching_indexs_out = NULL;
+	zval *matching_indexs_out = NULL;
+	zval *isCompiled = zend_read_property(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 1 TSRMLS_CC);
+
+	if (!Z_BVAL_P(isCompiled)) {
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set is not compiled");
+		Z_DELREF_P(isCompiled);
+		RETURN_FALSE;
+	}
+
+	Z_DELREF_P(isCompiled);
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &subject, &subject_len, &matching_indexs_out) == FAILURE) {
 		RETURN_FALSE;
@@ -1452,6 +1489,8 @@ PHP_MINIT_FUNCTION(re2)
 	/* register RE2_Set class */
 	INIT_CLASS_ENTRY(ce, PHP_RE2_SET_CLASS_NAME, re2_set_class_functions);
 	php_re2_set_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	zend_declare_property_bool(php_re2_class_entry, "hasPattern", strlen("hasPattern"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_bool(php_re2_class_entry, "isCompiled", strlen("isCompiled"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
 	php_re2_set_class_entry->create_object = re2_set_object_new;
 	memcpy(&re2_set_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 //	re2_set_object_handlers.clone_obj = re2_set_object_clone;

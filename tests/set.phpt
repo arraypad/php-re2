@@ -5,7 +5,7 @@ re2 - set
 --FILE--
 <?php
 
-echo "*** Testing RE2_Set class\n";
+echo "*** Testing RE2_Set class: correct\n";
 $s = new RE2_Set();
 
 assert($s->Add("zero") == 0);
@@ -35,10 +35,22 @@ if(!$s->Compile()) {
     print_r($matches);
 }
 
+echo "*** Testing RE2_Set class: incorrect - not compiled\n";
+$matches = null;
+$s = new RE2_Set();
+$s->add('one');
+var_dump($s->match('one', $matches), $matches);
+
+echo "*** Testing RE2_Set class: incorrect - no patterns\n";
+$matches = null;
+$s = new RE2_Set();
+var_dump($s->compile());
+
 ?>
 --EXPECTF--
-*** Testing RE2_Set class
+*** Testing RE2_Set class: correct
 Compile ok
+* All matching: forwards
 Array
 (
     [0] => 4
@@ -48,6 +60,7 @@ Array
     [4] => 3
     [5] => 5
 )
+* All matching: backwards
 Array
 (
     [0] => 5
@@ -61,3 +74,12 @@ Array
 Array
 (
 )
+*** Testing RE2_Set class: incorrect - not compiled
+
+Warning: RE2_Set::match(): Set is not compiled in %s/set.php on line %d
+bool(false)
+NULL
+*** Testing RE2_Set class: incorrect - no patterns
+
+Warning: RE2_Set::compile(): Set has no patterns in %s/set.php on line %d
+bool(false)
