@@ -79,9 +79,9 @@ PHP_METHOD(RE2_Options, setWordBoundary);
 PHP_METHOD(RE2_Options, setOneLine);
 
 PHP_METHOD(RE2_Set, __construct);
-PHP_METHOD(RE2_Set, Add);
-PHP_METHOD(RE2_Set, Compile);
-PHP_METHOD(RE2_Set, Match);
+PHP_METHOD(RE2_Set, add);
+PHP_METHOD(RE2_Set, compile);
+PHP_METHOD(RE2_Set, match);
 
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);

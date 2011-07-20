@@ -145,9 +145,9 @@ zend_class_entry *php_re2_set_class_entry;
 
 static zend_function_entry re2_set_class_functions[] = {
 	PHP_ME(RE2_Set, __construct, arginfo_re2_set_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
-	PHP_ME(RE2_Set, Add, arginfo_re2_set_add, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Set, Compile, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Set, Match, arginfo_re2_set_match, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Set, add, arginfo_re2_set_add, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Set, compile, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Set, match, arginfo_re2_set_match, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -1346,7 +1346,7 @@ PHP_METHOD(RE2_Set, __construct)
 
 /*	{{{ proto int RE2_Set::Add(string $pattern)
 	 */
-PHP_METHOD(RE2_Set, Add)
+PHP_METHOD(RE2_Set, add)
 {
 	char *pattern;
 	int pattern_len;
@@ -1362,7 +1362,7 @@ PHP_METHOD(RE2_Set, Add)
 
 /*	{{{ proto bool RE2_Set::Compile()
 	 */
-PHP_METHOD(RE2_Set, Compile)
+PHP_METHOD(RE2_Set, compile)
 {
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	RETURN_BOOL(obj->re2_set->Compile());
@@ -1371,7 +1371,7 @@ PHP_METHOD(RE2_Set, Compile)
 
 /*	{{{ proto bool RE2_Set::Match(string $subject, array &$matching_indexs)
 	 */
-PHP_METHOD(RE2_Set, Match)
+PHP_METHOD(RE2_Set, match)
 {
 	char *subject;
 	int subject_len;
