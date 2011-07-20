@@ -805,7 +805,7 @@ static inline int _create_re2_options_object(zval *options)
 	return SUCCESS;
 }
 /* }}} */
-#define PHP_RE2_CREATE_OPTIONS_OBJECT  \
+#define PHP_RE2_CREATE_OPTIONS_OBJECT \
 	MAKE_STD_ZVAL(options); \
 	Z_TYPE_P(options) = IS_OBJECT; \
 	object_init_ex(options, php_re2_options_class_entry); \
@@ -1319,14 +1319,15 @@ RE2_OPTION_BOOL_SETTER(OneLine, one_line);
 
 /* {{{ RE2_Set */
 
-/*	{{{ proto RE2_Set RE2_Set::__construct([RE2_Options $options])
+/*	{{{ proto RE2_Set RE2_Set::__construct([RE2_Options $options [, int $flags = RE2_ANCHOR_NONE]])
 	Construct a new RE2_Set object with options and anchor. */
 PHP_METHOD(RE2_Set, __construct)
 {
 	zval *options;
-	zval *anchor;
+	long flags = 0;
+	RE2::Anchor anchor;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|O", &options, php_re2_options_class_entry) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "|Ol", &options, php_re2_options_class_entry, &flags) == FAILURE) {
 		RETURN_NULL();
 	}
 		
@@ -1334,8 +1335,10 @@ PHP_METHOD(RE2_Set, __construct)
 		PHP_RE2_CREATE_OPTIONS_OBJECT
 	}
 
+	anchor = _php_re2_get_anchor_from_flags(flags);
+
 	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
-	RE2::Set *s = new RE2::Set(*options_obj->options, RE2::UNANCHORED);
+	RE2::Set *s = new RE2::Set(*options_obj->options, anchor);
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->re2_set = s;
 }
@@ -1355,7 +1358,7 @@ PHP_METHOD(RE2_Set, Add)
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	RETURN_LONG(obj->re2_set->Add(pattern, NULL)); //FIXME: support error string by ref
 }
-/*	  }}} */
+/*	}}} */
 
 /*	{{{ proto bool RE2_Set::Compile()
 	 */
@@ -1364,7 +1367,7 @@ PHP_METHOD(RE2_Set, Compile)
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	RETURN_BOOL(obj->re2_set->Compile());
 }
-/*	  }}} */
+/*	}}} */
 
 /*	{{{ proto bool RE2_Set::Match(string $subject, array &$matching_indexs)
 	 */
@@ -1396,7 +1399,7 @@ PHP_METHOD(RE2_Set, Match)
 	
 	RETURN_BOOL(found);
 }
-/*	  }}} */
+/*	}}} */
 
 /* }}} */
 
