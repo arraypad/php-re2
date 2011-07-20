@@ -1351,16 +1351,18 @@ PHP_METHOD(RE2_Set, add)
 	char *pattern;
 	int pattern_len;
 	long ret;
+	std::string error_str;
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &pattern, &pattern_len) == FAILURE) {
 		RETURN_FALSE;
 	}
 
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-	ret = obj->re2_set->Add(pattern, NULL);
+	ret = obj->re2_set->Add(pattern, &error_str);
 
 	if (ret == -1) {
-		/* todo: handle invalid pattern */
+		const char *error = error_str.c_str();
+		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern: '%s'", error);
 	} else {
 		zend_update_property_bool(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 1 TSRMLS_CC);
 	}
@@ -1489,11 +1491,11 @@ PHP_MINIT_FUNCTION(re2)
 	/* register RE2_Set class */
 	INIT_CLASS_ENTRY(ce, PHP_RE2_SET_CLASS_NAME, re2_set_class_functions);
 	php_re2_set_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
-	zend_declare_property_bool(php_re2_class_entry, "hasPattern", strlen("hasPattern"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
-	zend_declare_property_bool(php_re2_class_entry, "isCompiled", strlen("isCompiled"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_bool(php_re2_set_class_entry, "hasPattern", strlen("hasPattern"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_bool(php_re2_set_class_entry, "isCompiled", strlen("isCompiled"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
 	php_re2_set_class_entry->create_object = re2_set_object_new;
 	memcpy(&re2_set_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
-//	re2_set_object_handlers.clone_obj = re2_set_object_clone;
+	/* todo: re2_set_object_handlers.clone_obj = re2_set_object_clone; */
 		
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);
