@@ -1,6 +1,6 @@
 Introduction
 ============
-php-re2 is a PHP extension which provides an interface to Google's [RE2 regular-expression library](http://code.google.com/p/re2/).
+re2 is a PHP extension which provides an interface to Google's [RE2 regular-expression library](http://code.google.com/p/re2/).
 
 > Backtracking engines are typically full of features and convenient syntactic sugar but can be forced into taking exponential amounts of time on even small inputs. RE2 uses automata theory to guarantee that regular expression searches run in time linear in the size of the input. RE2 implements memory limits, so that searches can be constrained to a fixed amount of memory. RE2 is engineered to use a small fixed C++ stack footprint no matter what inputs or regular expressions it must process; thus RE2 is useful in multithreaded environments where thread stacks cannot grow arbitrarily large.
 > 
@@ -115,38 +115,38 @@ Escapes all potentially meaningful regexp characters in the subject.
 Classes
 =======
 
-## RE2
+## Re2
 
 Represents a compiled regex pattern.
 
-#### RE2 RE2::__construct(string $pattern [, RE2_Options $options])
+#### Re2 Re2::__construct(string $pattern [, RE2_Options $options])
 
-Construct a new RE2 object.
+Construct a new Re2 object.
 
-#### string RE2::getPattern()
+#### string Re2::getPattern()
 
 Returns the pattern.
 
-#### RE2_Options RE2::getOptions()
+#### Re2Options Re2::getOptions()
 
 Returns the options used for this pattern.
 
-## RE2_Options
+## Re2Options
 
 Options to be used for a particular pattern.
 
-#### RE2_Options RE2_Options::__construct()
+#### Re2Options Re2Options::__construct()
 
-Construct a new RE2_Options object.
+Construct a new Re2Options object.
 
-#### string RE2_Options::getEncoding()
-#### void RE2_Options::setEncoding(string $encoding)
+#### string Re2Options::getEncoding()
+#### void Re2Options::setEncoding(string $encoding)
 
 Default "utf8".
 The encoding to use for the pattern and subject strings, "utf8" or "latin1".
 
-#### int RE2_Options::getMaxMem()
-#### void RE2_Options::setMaxMem(int $max_mem)
+#### int Re2Options::getMaxMem()
+#### void Re2Options::setMaxMem(int $max_mem)
 
 Default 8388608 (65KB).
 
@@ -169,56 +169,56 @@ Default 8388608 (65KB).
 > Once a DFA fills its budget, it flushes its cache and starts over.
 > If this happens too often, RE2 falls back on the NFA implementation.
 
-#### bool RE2_Options::getPosixSyntax()
-#### void RE2_Options::setPosixSyntax(bool $value)
+#### bool Re2Options::getPosixSyntax()
+#### void Re2Options::setPosixSyntax(bool $value)
 
 Default `false`.
 Restrict patterns to POSIX egrep syntax.
 
-#### bool RE2_Options::getLongestMatch()
-#### void RE2_Options::setLongestMatch(bool $value)
+#### bool Re2Options::getLongestMatch()
+#### void Re2Options::setLongestMatch(bool $value)
 
 Default `false`.
 Search for the longest match instead of the first match.
 
-#### bool RE2_Options::getLogErrors()
-#### void RE2_Options::setLogErrors(bool $value)
+#### bool Re2Options::getLogErrors()
+#### void Re2Options::setLogErrors(bool $value)
 
 Default `true`.
 Write syntax and execution errors to stderr.
 
-#### bool RE2_Options::getLiteral()
-#### void RE2_Options::setLiteral(bool $value)
+#### bool Re2Options::getLiteral()
+#### void Re2Options::setLiteral(bool $value)
 
 Default `false`.
 Interpret pattern as literal, not regex.
 
-#### bool RE2_Options::getNeverNl()
-#### void RE2_Options::setNeverNl(bool $value)
+#### bool Re2Options::getNeverNl()
+#### void Re2Options::setNeverNl(bool $value)
 
 Default `false`.
 Never match `\n`, even in regex.
 
-#### bool RE2_Options::getCaseSensitive()
-#### void RE2_Options::setCaseSensitive(bool $value)
+#### bool Re2Options::getCaseSensitive()
+#### void Re2Options::setCaseSensitive(bool $value)
 
 Default `true`.
 Match is case-sensitive (regexp can override with (?i) unless in posix_syntax mode)
 
-#### bool RE2_Options::getPerlClasses()
-#### void RE2_Options::setPerlClasses(bool $value)
+#### bool Re2Options::getPerlClasses()
+#### void Re2Options::setPerlClasses(bool $value)
 
 Default `false`.
 Allow Perl's `\d \s \w \D \S \W` when in posix_syntax mode.
 
-#### bool RE2_Options::getWordBoundary()
-#### void RE2_Options::setWordBoundary(bool $value)
+#### bool Re2Options::getWordBoundary()
+#### void Re2Options::setWordBoundary(bool $value)
 
 Default `false`.
 Allow `\b \B` (word boundary and not) when in posix_syntax mode.
 
-#### bool RE2_Options::getOneLine()
-#### void RE2_Options::setOneLine(bool $value)
+#### bool Re2Options::getOneLine()
+#### void Re2Options::setOneLine(bool $value)
 
 Default `false`.
 `^` and `$` only match beginning and end of text when in posix_syntax mode.
