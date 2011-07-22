@@ -51,6 +51,15 @@ $matches = null;
 $s = new RE2_Set();
 var_dump($s->add('?'));
 
+echo "*** Testing RE2_Set class: correct - with options\n";
+$matches = null;
+$o = new RE2_Options;
+$o->setCaseSensitive(false);
+$s = new RE2_Set($o);
+$s->add('foo');
+$s->compile();
+var_dump($s->match('FOO', $matches), $matches);
+
 ?>
 --EXPECTF--
 *** Testing RE2_Set class: correct
