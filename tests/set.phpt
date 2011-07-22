@@ -102,4 +102,9 @@ re2/set.cc:%d: Error parsing '?': no argument for repetition operator: ?
 
 Warning: RE2_Set::add(): Invalid pattern: 'no argument for repetition operator: ?' in %s/set.php on line %d
 int(-1)
-
+*** Testing RE2_Set class: correct - with options
+bool(true)
+array(1) {
+  [0]=>
+  int(0)
+}
