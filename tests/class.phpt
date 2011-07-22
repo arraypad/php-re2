@@ -29,38 +29,38 @@ $matches = null;
 $newRe = clone $re2;
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
 
-echo "*** Testing RE2 class: re-use RE2_Options\n";
+echo "*** Testing RE2 class: re-use Re2Options\n";
 $matches = null;
 $options = $re2->getOptions();
 $newRe = new RE2('[\w ]+', $options);
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
 
-echo "*** Testing RE2 class: clone RE2_Options\n";
+echo "*** Testing RE2 class: clone Re2Options\n";
 $matches = null;
 $options = clone $re2->getOptions();
 $newRe = new RE2('[\w ]+', $options);
 var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
 
-echo "*** Testing RE2 class: change RE2_Options\n";
+echo "*** Testing RE2 class: change Re2Options\n";
 $matches = null;
 $options = $re2->getOptions();
 $options->setPosixSyntax(true);
 try {
 	$newRe = new RE2('[\w ]+', $options);
 	var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
-} catch (RE2_InvalidPatternException $e) {
+} catch (Re2InvalidPatternException $e) {
 	echo get_class($e), ": ", $e->getMessage(), "\n";
 }
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
-echo "*** Testing RE2 class: clone and change RE2_Options\n";
+echo "*** Testing RE2 class: clone and change Re2Options\n";
 $matches = null;
 $options = clone $re2->getOptions();
 $options->setPosixSyntax(true);
 try {
 	$newRe = new RE2('[\w ]+', $options);
 	var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
-} catch (RE2_InvalidPatternException $e) {
+} catch (Re2InvalidPatternException $e) {
 	echo get_class($e), ": ", $e->getMessage(), "\n";
 }
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
@@ -69,7 +69,7 @@ var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 --EXPECTF--
 object(RE2)#1 (1) {
   ["options":protected]=>
-  object(RE2_Options)#2 (0) {
+  object(Re2Options)#2 (0) {
   }
 }
 *** Testing RE2 class: getPattern()
@@ -112,21 +112,21 @@ array(2) {
   [1]=>
   string(5) "regex"
 }
-*** Testing RE2 class: re-use RE2_Options
+*** Testing RE2 class: re-use Re2Options
 int(1)
 array(1) {
   [0]=>
   string(17) "Hello regex world"
 }
-*** Testing RE2 class: clone RE2_Options
+*** Testing RE2 class: clone Re2Options
 int(1)
 array(1) {
   [0]=>
   string(17) "Hello regex world"
 }
-*** Testing RE2 class: change RE2_Options
+*** Testing RE2 class: change Re2Options
 re2/re2.cc:%d: Error parsing '[\w ]+': invalid escape sequence: \w
-RE2_InvalidPatternException: invalid escape sequence: \w
+Re2InvalidPatternException: invalid escape sequence: \w
 int(1)
 array(2) {
   [0]=>
@@ -134,9 +134,9 @@ array(2) {
   [1]=>
   string(5) "regex"
 }
-*** Testing RE2 class: clone and change RE2_Options
+*** Testing RE2 class: clone and change Re2Options
 re2/re2.cc:%d: Error parsing '[\w ]+': invalid escape sequence: \w
-RE2_InvalidPatternException: invalid escape sequence: \w
+Re2InvalidPatternException: invalid escape sequence: \w
 int(1)
 array(2) {
   [0]=>

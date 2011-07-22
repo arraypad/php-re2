@@ -8,22 +8,22 @@ re2 - options
 function testOption($option, $pattern, $subject, $argc = 0, $isPosix = false, $values = array(false, true)) {
 	$func = 'set' . $option;
 
-	$opts = new RE2_Options();
+	$opts = new Re2Options();
 	if ($isPosix) $opts->setPosixSyntax(true);
 	$opts->$func($values[0]);
 	try {
 		var_dump(re2_match(new RE2($pattern, $opts), $subject, $matches));
-	} catch (RE2_InvalidPatternException $e) {
+	} catch (Re2InvalidPatternException $e) {
 		echo get_class($e), ": ", $e->getMessage(), "\n";
 	}
 	if ($argc) var_dump($matches);
 
-	$opts = new RE2_Options();
+	$opts = new Re2Options();
 	if ($isPosix) $opts->setPosixSyntax(true);
 	$opts->$func($values[1]);
 	try {
 		var_dump(re2_match(new RE2($pattern, $opts), $subject, $matches));
-	} catch (RE2_InvalidPatternException $e) {
+	} catch (Re2InvalidPatternException $e) {
 		echo get_class($e), ": ", $e->getMessage(), "\n";
 	}
 	if ($argc) var_dump($matches);
@@ -66,16 +66,16 @@ testOption('OneLine', '^regex', "Hello\nregex world", 0, true);
 --EXPECTF--
 *** Testing RE2 option: encoding
 re2/re2.cc:%d: Error parsing '%s': invalid UTF-8
-RE2_InvalidPatternException: invalid UTF-8
+Re2InvalidPatternException: invalid UTF-8
 int(1)
 *** Testing RE2 option: max_mem
 re2/re2.cc:%d: Error compiling '(a+)*'
-RE2_InvalidPatternException: pattern too large - compile failed
+Re2InvalidPatternException: pattern too large - compile failed
 int(1)
 *** Testing RE2 option: posix_syntax
 int(1)
 re2/re2.cc:%d: Error parsing '\w+': invalid escape sequence: \w
-RE2_InvalidPatternException: invalid escape sequence: \w
+Re2InvalidPatternException: invalid escape sequence: \w
 *** Testing RE2 option: longest_match
 int(1)
 array(2) {
@@ -92,9 +92,9 @@ array(2) {
   string(2) "aa"
 }
 *** Testing RE2 option: log_errors
-RE2_InvalidPatternException: invalid escape sequence: \X
+Re2InvalidPatternException: invalid escape sequence: \X
 re2/re2.cc:%d: Error parsing '\X': invalid escape sequence: \X
-RE2_InvalidPatternException: invalid escape sequence: \X
+Re2InvalidPatternException: invalid escape sequence: \X
 *** Testing RE2 option: literal
 int(1)
 int(0)
@@ -106,11 +106,11 @@ int(1)
 int(0)
 *** Testing RE2 option: perl_classes
 re2/re2.cc:%d: Error parsing '\w': invalid escape sequence: \w
-RE2_InvalidPatternException: invalid escape sequence: \w
+Re2InvalidPatternException: invalid escape sequence: \w
 int(1)
 *** Testing RE2 option: word_boundary
 re2/re2.cc:%d: Error parsing 'Hello\b': invalid escape sequence: \b
-RE2_InvalidPatternException: invalid escape sequence: \b
+Re2InvalidPatternException: invalid escape sequence: \b
 int(1)
 *** Testing RE2 option: one_line
 int(1)

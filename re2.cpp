@@ -104,13 +104,13 @@ const zend_function_entry re2_functions[] = {
 /* {{{ RE2 classes */
 
 zend_class_entry *php_re2_illegal_state_exception_class_entry;
-#define PHP_RE2_ILLEGAL_STATE_EXCEPTION_CLASS_NAME "RE2_IllegalStateException"
+#define PHP_RE2_ILLEGAL_STATE_EXCEPTION_CLASS_NAME "Re2IllegalStateException"
 
 zend_class_entry *php_re2_invalid_pattern_exception_class_entry;
-#define PHP_RE2_INVALID_PATTERN_EXCEPTION_CLASS_NAME "RE2_InvalidPatternException"
+#define PHP_RE2_INVALID_PATTERN_EXCEPTION_CLASS_NAME "Re2InvalidPatternException"
 
 zend_class_entry *php_re2_internal_error_exception_class_entry;
-#define PHP_RE2_INTERNAL_ERROR_EXCEPTION_CLASS_NAME "RE2_InternalErrorException"
+#define PHP_RE2_INTERNAL_ERROR_EXCEPTION_CLASS_NAME "Re2InternalErrorException"
 
 zend_class_entry *php_re2_class_entry;
 #define PHP_RE2_CLASS_NAME "RE2"
@@ -124,7 +124,7 @@ static zend_function_entry re2_class_functions[] = {
 };
 
 zend_class_entry *php_re2_options_class_entry;
-#define PHP_RE2_OPTIONS_CLASS_NAME "RE2_Options"
+#define PHP_RE2_OPTIONS_CLASS_NAME "Re2Options"
 
 static zend_function_entry re2_options_class_functions[] = {
 	PHP_ME(RE2_Options, __construct, arginfo_re2_no_args, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
@@ -154,7 +154,7 @@ static zend_function_entry re2_options_class_functions[] = {
 };
 
 zend_class_entry *php_re2_set_class_entry;
-#define PHP_RE2_SET_CLASS_NAME "RE2_Set"
+#define PHP_RE2_SET_CLASS_NAME "Re2Set"
 
 static zend_function_entry re2_set_class_functions[] = {
 	PHP_ME(RE2_Set, __construct, arginfo_re2_set_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)

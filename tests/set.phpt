@@ -5,8 +5,8 @@ re2 - set
 --FILE--
 <?php
 
-echo "*** Testing RE2_Set class: correct\n";
-$s = new RE2_Set();
+echo "*** Testing Re2Set class: correct\n";
+$s = new Re2Set();
 
 assert($s->Add("zero") == 0);
 assert($s->Add("one") == 1);
@@ -35,46 +35,46 @@ if(!$s->Compile()) {
     print_r($matches);
 }
 
-echo "*** Testing RE2_Set class: incorrect - not compiled\n";
+echo "*** Testing Re2Set class: incorrect - not compiled\n";
 $matches = null;
-$s = new RE2_Set();
+$s = new Re2Set();
 $s->add('one');
 try {
 	var_dump($s->match('one', $matches), $matches);
-} catch (RE2_IllegalStateException $e) {
+} catch (Re2IllegalStateException $e) {
 	echo get_class($e), ": ", $e->getMessage(), "\n";
 }
 
-echo "*** Testing RE2_Set class: incorrect - no patterns\n";
+echo "*** Testing Re2Set class: incorrect - no patterns\n";
 $matches = null;
-$s = new RE2_Set();
+$s = new Re2Set();
 try {
 	var_dump($s->compile());
-} catch (RE2_IllegalStateException $e) {
+} catch (Re2IllegalStateException $e) {
 	echo get_class($e), ": ", $e->getMessage(), "\n";
 }
 
-echo "*** Testing RE2_Set class: incorrect - invalid pattern\n";
+echo "*** Testing Re2Set class: incorrect - invalid pattern\n";
 $matches = null;
-$s = new RE2_Set();
+$s = new Re2Set();
 try {
 	var_dump($s->add('?'));
-} catch (RE2_InvalidPatternException $e) {
+} catch (Re2InvalidPatternException $e) {
 	echo get_class($e), ": ", $e->getMessage(), "\n";
 }
 
-echo "*** Testing RE2_Set class: correct - with options\n";
+echo "*** Testing Re2Set class: correct - with options\n";
 $matches = null;
-$o = new RE2_Options;
+$o = new Re2Options;
 $o->setCaseSensitive(false);
-$s = new RE2_Set($o);
+$s = new Re2Set($o);
 $s->add('foo');
 $s->compile();
 var_dump($s->match('FOO', $matches), $matches);
 
 ?>
 --EXPECTF--
-*** Testing RE2_Set class: correct
+*** Testing Re2Set class: correct
 Compile ok
 * All matching: forwards
 Array
@@ -100,14 +100,14 @@ Array
 Array
 (
 )
-*** Testing RE2_Set class: incorrect - not compiled
-RE2_IllegalStateException: Set is not compiled
-*** Testing RE2_Set class: incorrect - no patterns
-RE2_IllegalStateException: Set has no patterns
-*** Testing RE2_Set class: incorrect - invalid pattern
+*** Testing Re2Set class: incorrect - not compiled
+Re2IllegalStateException: Set is not compiled
+*** Testing Re2Set class: incorrect - no patterns
+Re2IllegalStateException: Set has no patterns
+*** Testing Re2Set class: incorrect - invalid pattern
 re2/set.cc:%d: Error parsing '?': no argument for repetition operator: ?
-RE2_InvalidPatternException: no argument for repetition operator: ?
-*** Testing RE2_Set class: correct - with options
+Re2InvalidPatternException: no argument for repetition operator: ?
+*** Testing Re2Set class: correct - with options
 bool(true)
 array(1) {
   [0]=>
