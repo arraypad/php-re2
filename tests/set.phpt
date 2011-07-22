@@ -39,17 +39,29 @@ echo "*** Testing RE2_Set class: incorrect - not compiled\n";
 $matches = null;
 $s = new RE2_Set();
 $s->add('one');
-var_dump($s->match('one', $matches), $matches);
+try {
+	var_dump($s->match('one', $matches), $matches);
+} catch (RE2_IllegalStateException $e) {
+	echo get_class($e), ": ", $e->getMessage(), "\n";
+}
 
 echo "*** Testing RE2_Set class: incorrect - no patterns\n";
 $matches = null;
 $s = new RE2_Set();
-var_dump($s->compile());
+try {
+	var_dump($s->compile());
+} catch (RE2_IllegalStateException $e) {
+	echo get_class($e), ": ", $e->getMessage(), "\n";
+}
 
 echo "*** Testing RE2_Set class: incorrect - invalid pattern\n";
 $matches = null;
 $s = new RE2_Set();
-var_dump($s->add('?'));
+try {
+	var_dump($s->add('?'));
+} catch (RE2_InvalidPatternException $e) {
+	echo get_class($e), ": ", $e->getMessage(), "\n";
+}
 
 echo "*** Testing RE2_Set class: correct - with options\n";
 $matches = null;
@@ -89,19 +101,12 @@ Array
 (
 )
 *** Testing RE2_Set class: incorrect - not compiled
-
-Warning: RE2_Set::match(): Set is not compiled in %s/set.php on line %d
-bool(false)
-NULL
+RE2_IllegalStateException: Set is not compiled
 *** Testing RE2_Set class: incorrect - no patterns
-
-Warning: RE2_Set::compile(): Set has no patterns in %s/set.php on line %d
-bool(false)
+RE2_IllegalStateException: Set has no patterns
 *** Testing RE2_Set class: incorrect - invalid pattern
 re2/set.cc:%d: Error parsing '?': no argument for repetition operator: ?
-
-Warning: RE2_Set::add(): Invalid pattern: 'no argument for repetition operator: ?' in %s/set.php on line %d
-int(-1)
+RE2_InvalidPatternException: no argument for repetition operator: ?
 *** Testing RE2_Set class: correct - with options
 bool(true)
 array(1) {

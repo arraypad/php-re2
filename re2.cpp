@@ -24,6 +24,7 @@ extern "C" {
 #include "php.h"
 #include "php_ini.h"
 #include "ext/standard/info.h"
+#include "Zend/zend_exceptions.h"
 }
 
 #include "php_re2.h"
@@ -101,6 +102,13 @@ const zend_function_entry re2_functions[] = {
 /* }}} */
 
 /* {{{ RE2 classes */
+
+zend_class_entry *php_re2_illegal_state_exception_class_entry;
+#define PHP_RE2_ILLEGAL_STATE_EXCEPTION_CLASS_NAME "RE2_IllegalStateException"
+
+zend_class_entry *php_re2_invalid_pattern_exception_class_entry;
+#define PHP_RE2_INVALID_PATTERN_EXCEPTION_CLASS_NAME "RE2_InvalidPatternException"
+
 zend_class_entry *php_re2_class_entry;
 #define PHP_RE2_CLASS_NAME "RE2"
 
@@ -1370,7 +1378,8 @@ PHP_METHOD(RE2_Set, add)
 
 	if (ret == -1) {
 		const char *error = error_str.c_str();
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern: '%s'", error);
+		zend_throw_exception(php_re2_invalid_pattern_exception_class_entry, (char *)error, 0 TSRMLS_CC);
+		RETURN_FALSE;
 	} else {
 		zend_update_property_bool(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 1 TSRMLS_CC);
 	}
@@ -1387,7 +1396,7 @@ PHP_METHOD(RE2_Set, compile)
 	zval *hasPattern = zend_read_property(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 0 TSRMLS_CC);
 
 	if (!Z_BVAL_P(hasPattern)) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set has no patterns");
+		zend_throw_exception(php_re2_illegal_state_exception_class_entry, "Set has no patterns", 0 TSRMLS_CC);
 		RETURN_FALSE;
 	}
 
@@ -1414,7 +1423,7 @@ PHP_METHOD(RE2_Set, match)
 	zval *isCompiled = zend_read_property(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 0 TSRMLS_CC);
 
 	if (!Z_BVAL_P(isCompiled)) {
-		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set is not compiled");
+		zend_throw_exception(php_re2_illegal_state_exception_class_entry, "Set is not compiled", 0 TSRMLS_CC);
 		RETURN_FALSE;
 	}
 
@@ -1498,6 +1507,16 @@ PHP_MINIT_FUNCTION(re2)
 	php_re2_set_class_entry->create_object = re2_set_object_new;
 	memcpy(&re2_set_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	/* todo: re2_set_object_handlers.clone_obj = re2_set_object_clone; */
+
+	/* register RE2_IllegalStateException */
+	INIT_CLASS_ENTRY(ce, PHP_RE2_ILLEGAL_STATE_EXCEPTION_CLASS_NAME, NULL);
+	php_re2_illegal_state_exception_class_entry = zend_register_internal_class_ex(&ce, zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
+	php_re2_illegal_state_exception_class_entry->ce_flags |= ZEND_ACC_FINAL;
+
+	/* register RE2_InvalidPatternException */
+	INIT_CLASS_ENTRY(ce, PHP_RE2_INVALID_PATTERN_EXCEPTION_CLASS_NAME, NULL);
+	php_re2_invalid_pattern_exception_class_entry = zend_register_internal_class_ex(&ce, zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
+	php_re2_invalid_pattern_exception_class_entry->ce_flags |= ZEND_ACC_FINAL;
 		
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);
