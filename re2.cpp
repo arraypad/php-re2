@@ -81,6 +81,8 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_set_match, 0, 0, 2)
 	ZEND_ARG_INFO(0, subject)
 	ZEND_ARG_INFO(0, match_indexes)
 ZEND_END_ARG_INFO()
+ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_no_args, 0, 0, 0)
+ZEND_END_ARG_INFO()
 /* }}} */
 
 /* {{{ re2_functions[]
@@ -104,9 +106,9 @@ zend_class_entry *php_re2_class_entry;
 
 static zend_function_entry re2_class_functions[] = {
 	PHP_ME(RE2, __construct, arginfo_re2_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
-	PHP_ME(RE2, getOptions, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2, getPattern, NULL, ZEND_ACC_PUBLIC)
-	PHP_MALIAS(RE2, __toString, getPattern, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2, getOptions, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2, getPattern, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_MALIAS(RE2, __toString, getPattern, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
 
@@ -114,18 +116,18 @@ zend_class_entry *php_re2_options_class_entry;
 #define PHP_RE2_OPTIONS_CLASS_NAME "RE2_Options"
 
 static zend_function_entry re2_options_class_functions[] = {
-	PHP_ME(RE2_Options, __construct, NULL, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
-	PHP_ME(RE2_Options, getEncoding, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getMaxMem, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getPosixSyntax, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getLongestMatch, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getLogErrors, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getLiteral, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getNeverNl, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getCaseSensitive, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getPerlClasses, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getWordBoundary, NULL, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Options, getOneLine, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, __construct, arginfo_re2_no_args, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
+	PHP_ME(RE2_Options, getEncoding, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getMaxMem, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getPosixSyntax, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getLongestMatch, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getLogErrors, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getLiteral, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getNeverNl, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getCaseSensitive, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getPerlClasses, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getWordBoundary, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Options, getOneLine, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
 	PHP_ME(RE2_Options, setEncoding, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
 	PHP_ME(RE2_Options, setMaxMem, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
 	PHP_ME(RE2_Options, setPosixSyntax, arginfo_re2_one_arg, ZEND_ACC_PUBLIC)
@@ -146,7 +148,7 @@ zend_class_entry *php_re2_set_class_entry;
 static zend_function_entry re2_set_class_functions[] = {
 	PHP_ME(RE2_Set, __construct, arginfo_re2_set_construct, ZEND_ACC_PUBLIC|ZEND_ACC_CTOR)
 	PHP_ME(RE2_Set, add, arginfo_re2_set_add, ZEND_ACC_PUBLIC)
-	PHP_ME(RE2_Set, compile, NULL, ZEND_ACC_PUBLIC)
+	PHP_ME(RE2_Set, compile, arginfo_re2_no_args, ZEND_ACC_PUBLIC)
 	PHP_ME(RE2_Set, match, arginfo_re2_set_match, ZEND_ACC_PUBLIC)
 	{NULL, NULL, NULL}
 };
@@ -308,7 +310,7 @@ void re2_set_free_storage(void *object TSRMLS_DC)
 
 zend_object_value re2_set_object_new_ex(zend_class_entry *type, re2_set_object **ptr TSRMLS_DC)
 {
-	zval *tmp;
+	zval *tmp, *hasPattern, *isCompiled;
 	zend_object_value retval;
 
 	re2_set_object *obj = (re2_set_object *)emalloc(sizeof(re2_set_object));
@@ -320,7 +322,7 @@ zend_object_value re2_set_object_new_ex(zend_class_entry *type, re2_set_object *
 	}
 
 	ALLOC_HASHTABLE(obj->std.properties);
-	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
+	zend_hash_init(obj->std.properties, 2, NULL, ZVAL_PTR_DTOR, 0);
 	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_set_free_storage, NULL TSRMLS_CC);
@@ -805,11 +807,14 @@ static inline int _create_re2_options_object(zval *options)
 	return SUCCESS;
 }
 /* }}} */
+
 #define PHP_RE2_CREATE_OPTIONS_OBJECT \
 	MAKE_STD_ZVAL(options); \
 	Z_TYPE_P(options) = IS_OBJECT; \
 	object_init_ex(options, php_re2_options_class_entry); \
 	if(_create_re2_options_object(options) == FAILURE) { \
+		zval_add_ref(&options); \
+		zval_ptr_dtor(&options); \
 		RETURN_NULL(); \
 	} 
 
@@ -1341,6 +1346,9 @@ PHP_METHOD(RE2_Set, __construct)
 	RE2::Set *s = new RE2::Set(*options_obj->options, anchor);
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->re2_set = s;
+
+	zval_add_ref(&options);
+	zval_ptr_dtor(&options);
 }
 /*	}}} */
 
@@ -1380,12 +1388,9 @@ PHP_METHOD(RE2_Set, compile)
 
 	if (!Z_BVAL_P(hasPattern)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set has no patterns");
-		Z_DELREF_P(hasPattern);
 		RETURN_FALSE;
 	}
 
-	Z_DELREF_P(hasPattern);
-	
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	ret = obj->re2_set->Compile();
 
@@ -1410,11 +1415,8 @@ PHP_METHOD(RE2_Set, match)
 
 	if (!Z_BVAL_P(isCompiled)) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Set is not compiled");
-		Z_DELREF_P(isCompiled);
 		RETURN_FALSE;
 	}
-
-	Z_DELREF_P(isCompiled);
 
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "sz", &subject, &subject_len, &matching_indexs_out) == FAILURE) {
 		RETURN_FALSE;
