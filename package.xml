@@ -2,16 +2,18 @@
 <package version="2.1" xmlns="http://pear.php.net/dtd/package-2.1" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0     http://pear.php.net/dtd/tasks-1.0.xsd     http://pear.php.net/dtd/package-2.1     http://pear.php.net/dtd/package-2.1.xsd">
  <name>re2</name>
  <channel>pecl.php.net</channel>
- <summary>Wrapper for re2, "an efficient, principled regular expression library"</summary>
- <description/>
+ <summary>Extension for RE2</summary>
+ <description>
+ This extension provides a PCRE-like interface to RE2, "an efficient, principled regular expression library".
+ </description>
  <lead>
   <name>Arpad Ray</name>
   <user>arpad</user>
   <email>arpad@php.net</email>
   <active>yes</active>
  </lead>
- <date>2011-06-17</date>
- <time>14:13:55</time>
+ <date>2011-07-22</date>
+ <time>15:26:55</time>
  <version>
   <release>0.0.1RC1</release>
   <api>0.0.1</api>
@@ -21,7 +23,9 @@
   <api>alpha</api>
  </stability>
  <license uri="http://www.php.net/license">PHP License</license>
- <notes/>
+ <notes>
+- Initial preview release
+ </notes>
  <contents>
   <dir name="/">
    <dir name="tests">
@@ -35,6 +39,7 @@
     <file role="test" name="replace.phpt"/>
     <file role="test" name="replace_callback.phpt"/>
     <file role="test" name="split.phpt"/>
+    <file role="test" name="set.phpt"/>
    </dir>
    <file role="src" name="re2.cpp"/>
    <file role="src" name="php_re2.h"/>
