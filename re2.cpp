@@ -1133,6 +1133,13 @@ PHP_METHOD(RE2, __construct)
 	pattern_str = std::string(pattern, pattern_len);
 	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
 	RE2 *re2_obj = new RE2(pattern_str, *options_obj->options);
+
+	if (!re2_obj->ok()) {
+		const char *error = re2_obj->error().c_str();
+		zend_throw_exception(php_re2_invalid_pattern_exception_class_entry, (char *)error, 0 TSRMLS_CC);
+		RETURN_NULL();
+	}
+
 	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	obj->re = re2_obj;
 }

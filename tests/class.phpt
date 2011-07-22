@@ -45,16 +45,24 @@ echo "*** Testing RE2 class: change RE2_Options\n";
 $matches = null;
 $options = $re2->getOptions();
 $options->setPosixSyntax(true);
-$newRe = new RE2('[\w ]+', $options);
-var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+try {
+	$newRe = new RE2('[\w ]+', $options);
+	var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+} catch (RE2_InvalidPatternException $e) {
+	echo get_class($e), ": ", $e->getMessage(), "\n";
+}
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
 echo "*** Testing RE2 class: clone and change RE2_Options\n";
 $matches = null;
 $options = clone $re2->getOptions();
 $options->setPosixSyntax(true);
-$newRe = new RE2('[\w ]+', $options);
-var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+try {
+	$newRe = new RE2('[\w ]+', $options);
+	var_dump(re2_match($newRe, 'Hello regex world', $matches), $matches);
+} catch (RE2_InvalidPatternException $e) {
+	echo get_class($e), ": ", $e->getMessage(), "\n";
+}
 var_dump(re2_match($re2, 'Hello regex world', $matches), $matches);
 
 ?>
@@ -118,10 +126,7 @@ array(1) {
 }
 *** Testing RE2 class: change RE2_Options
 re2/re2.cc:%d: Error parsing '[\w ]+': invalid escape sequence: \w
-
-Warning: re2_match(): Invalid pattern in %s/class.php on line %d
-bool(false)
-NULL
+RE2_InvalidPatternException: invalid escape sequence: \w
 int(1)
 array(2) {
   [0]=>
@@ -131,10 +136,7 @@ array(2) {
 }
 *** Testing RE2 class: clone and change RE2_Options
 re2/re2.cc:%d: Error parsing '[\w ]+': invalid escape sequence: \w
-
-Warning: re2_match(): Invalid pattern in %s/class.php on line %d
-bool(false)
-NULL
+RE2_InvalidPatternException: invalid escape sequence: \w
 int(1)
 array(2) {
   [0]=>
