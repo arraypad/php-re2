@@ -109,6 +109,9 @@ zend_class_entry *php_re2_illegal_state_exception_class_entry;
 zend_class_entry *php_re2_invalid_pattern_exception_class_entry;
 #define PHP_RE2_INVALID_PATTERN_EXCEPTION_CLASS_NAME "RE2_InvalidPatternException"
 
+zend_class_entry *php_re2_internal_error_exception_class_entry;
+#define PHP_RE2_INTERNAL_ERROR_EXCEPTION_CLASS_NAME "RE2_InternalErrorException"
+
 zend_class_entry *php_re2_class_entry;
 #define PHP_RE2_CLASS_NAME "RE2"
 
@@ -1399,7 +1402,7 @@ PHP_METHOD(RE2_Set, add)
 	 */
 PHP_METHOD(RE2_Set, compile)
 {
-	long ret;
+	bool ret;
 	zval *hasPattern = zend_read_property(php_re2_set_class_entry, getThis(), "hasPattern", strlen("hasPattern"), 0 TSRMLS_CC);
 
 	if (!Z_BVAL_P(hasPattern)) {
@@ -1410,10 +1413,11 @@ PHP_METHOD(RE2_Set, compile)
 	re2_set_object *obj = (re2_set_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 	ret = obj->re2_set->Compile();
 
-	if (ret >= 0) {
+	if (ret) {
 		zend_update_property_bool(php_re2_set_class_entry, getThis(), "isCompiled", strlen("isCompiled"), 1 TSRMLS_CC);
 	} else {
-		/* todo: handle compile failure */
+		zend_throw_exception(php_re2_internal_error_exception_class_entry, "Insufficient memory", 0 TSRMLS_CC);
+		RETURN_FALSE;
 	}
 
 	RETURN_BOOL(ret);
@@ -1524,6 +1528,11 @@ PHP_MINIT_FUNCTION(re2)
 	INIT_CLASS_ENTRY(ce, PHP_RE2_INVALID_PATTERN_EXCEPTION_CLASS_NAME, NULL);
 	php_re2_invalid_pattern_exception_class_entry = zend_register_internal_class_ex(&ce, zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
 	php_re2_invalid_pattern_exception_class_entry->ce_flags |= ZEND_ACC_FINAL;
+		
+	/* register RE2_InternalErrorException */
+	INIT_CLASS_ENTRY(ce, PHP_RE2_INTERNAL_ERROR_EXCEPTION_CLASS_NAME, NULL);
+	php_re2_internal_error_exception_class_entry = zend_register_internal_class_ex(&ce, zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
+	php_re2_internal_error_exception_class_entry->ce_flags |= ZEND_ACC_FINAL;
 		
 	/* register constants */
 	REGISTER_LONG_CONSTANT("RE2_ANCHOR_NONE", RE2_ANCHOR_NONE, CONST_CS | CONST_PERSISTENT);
