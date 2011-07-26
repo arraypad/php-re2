@@ -191,10 +191,7 @@ void re2_free_storage(void *object TSRMLS_DC)
 	re2_object *obj = (re2_object *)object;
 	delete obj->re;
 
-	zend_hash_destroy(obj->std.properties);
-	FREE_HASHTABLE(obj->std.properties);
-
-	efree(obj);
+	zend_objects_free_object_storage((zend_object *)object TSRMLS_CC);
 }
 
 zend_object_value re2_object_new_ex(zend_class_entry *type, re2_object **ptr TSRMLS_DC)
@@ -211,7 +208,11 @@ zend_object_value re2_object_new_ex(zend_class_entry *type, re2_object **ptr TSR
 	}
 
 	zend_object_std_init(&obj->std, type TSRMLS_CC);
+#if ZEND_MODULE_API_NO >= 20100409
+	object_properties_init(&obj->std, type);
+#else
 	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
+#endif
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &re2_object_handlers;
@@ -249,10 +250,7 @@ void re2_options_free_storage(void *object TSRMLS_DC)
 	re2_options_object *obj = (re2_options_object *)object;
 	delete obj->options;
 
-	zend_hash_destroy(obj->std.properties);
-	FREE_HASHTABLE(obj->std.properties);
-
-	efree(obj);
+	zend_objects_free_object_storage((zend_object *)object TSRMLS_CC);
 }
 
 zend_object_value re2_options_object_new_ex(zend_class_entry *type, re2_options_object **ptr TSRMLS_DC)
@@ -268,9 +266,12 @@ zend_object_value re2_options_object_new_ex(zend_class_entry *type, re2_options_
 		*ptr = obj;
 	}
 
-	ALLOC_HASHTABLE(obj->std.properties);
-	zend_hash_init(obj->std.properties, 0, NULL, ZVAL_PTR_DTOR, 0);
+	zend_object_std_init(&obj->std, type TSRMLS_CC);
+#if ZEND_MODULE_API_NO >= 20100409
+	object_properties_init(&obj->std, type);
+#else
 	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
+#endif
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_options_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &re2_options_object_handlers;
@@ -313,10 +314,7 @@ void re2_set_free_storage(void *object TSRMLS_DC)
 	re2_set_object *obj = (re2_set_object *)object;
 	delete obj->re2_set;
 
-	zend_hash_destroy(obj->std.properties);
-	FREE_HASHTABLE(obj->std.properties);
-
-	efree(obj);
+	zend_objects_free_object_storage((zend_object *)object TSRMLS_CC);
 }
 
 zend_object_value re2_set_object_new_ex(zend_class_entry *type, re2_set_object **ptr TSRMLS_DC)
@@ -332,9 +330,12 @@ zend_object_value re2_set_object_new_ex(zend_class_entry *type, re2_set_object *
 		*ptr = obj;
 	}
 
-	ALLOC_HASHTABLE(obj->std.properties);
-	zend_hash_init(obj->std.properties, 2, NULL, ZVAL_PTR_DTOR, 0);
+	zend_object_std_init(&obj->std, type TSRMLS_CC);
+#if ZEND_MODULE_API_NO >= 20100409
+	object_properties_init(&obj->std, type);
+#else
 	zend_hash_copy(obj->std.properties, &type->default_properties, (copy_ctor_func_t)zval_add_ref, (void *)&tmp, sizeof(zval *));
+#endif
 
 	retval.handle = zend_objects_store_put(obj, NULL, re2_set_free_storage, NULL TSRMLS_CC);
 	retval.handlers = &re2_set_object_handlers;
@@ -710,7 +711,8 @@ static int _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_
 
 		if (num_matches) {
 			*count += num_matches;
-			efree(Z_STRVAL_P(subject));
+			zval_ptr_dtor(&subject);
+			MAKE_STD_ZVAL(subject);
 			ZVAL_STRINGL(subject, out_str.c_str(), out_str.length(), 1);
 		}
 
