@@ -33,6 +33,13 @@ extern "C" {
 #include <re2/set.h>
 #include <string>
 
+#if ZEND_MODULE_API_NO < 20090626
+# define array_init_size(arg, size) array_init(arg)
+# define Z_ADDREF_P(arg) ZVAL_ADDREF(arg)
+# define Z_ADDREF_PP(arg) ZVAL_ADDREF(*(arg))
+# define Z_DELREF_P(arg) ZVAL_DELREF(arg)
+# define Z_DELREF_PP(arg) ZVAL_DELREF(*(arg))
+#endif
 
 /* {{{ arg info */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match, 0, 0, 2)
@@ -88,7 +95,7 @@ ZEND_END_ARG_INFO()
 
 /* {{{ re2_functions[]
  */
-const zend_function_entry re2_functions[] = {
+static zend_function_entry re2_functions[] = {
 	PHP_FE(re2_match, arginfo_re2_match)
 	PHP_FE(re2_match_all, arginfo_re2_match_all)
 	PHP_FE(re2_replace, arginfo_re2_replace)
@@ -388,7 +395,7 @@ static RE2::Anchor _php_re2_get_anchor_from_flags(int flags)
 		add_next_index_stringl(piece, match, len, 1); \
 		add_next_index_long(piece, ptr == NULL ? -1 : offset); \
 	} else { \
-		ZVAL_STRINGL(piece, match, len, 1); \
+		ZVAL_STRINGL(piece, (char *)match, len, 1); \
 	} \
 	if (match) { \
 		efree(match); \
@@ -410,7 +417,7 @@ static void _php_re2_populate_matches(RE2 *re, zval **matches, re2::StringPiece 
 			/* this index also has a named group */
 			std::string name = iter->second;
 			Z_ADDREF_P(piece);
-			add_assoc_zval_ex(flags & RE2_PATTERN_ORDER ? matches[j++] : *matches, (const char *)name.c_str(), name.length() + 1, piece);
+			add_assoc_zval_ex(flags & RE2_PATTERN_ORDER ? matches[j++] : *matches, (char *)name.c_str(), name.length() + 1, piece);
 		}
 
 		add_next_index_zval(flags & RE2_PATTERN_ORDER ? matches[j++] : *matches, piece);
@@ -713,7 +720,7 @@ static int _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_
 			*count += num_matches;
 			zval_ptr_dtor(&subject);
 			MAKE_STD_ZVAL(subject);
-			ZVAL_STRINGL(subject, out_str.c_str(), out_str.length(), 1);
+			ZVAL_STRINGL(subject, (char *)out_str.c_str(), out_str.length(), 1);
 		}
 
 		RE2_FREE_PATTERN;
@@ -730,7 +737,7 @@ static int _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_
 	RE2_FREE_ARRAY(replace);
 
 	Z_TYPE_P(return_value) = IS_STRING;
-	ZVAL_STRINGL(return_value, Z_STRVAL_P(subject), Z_STRLEN_P(subject), 1);
+	ZVAL_STRINGL(return_value, (char *)Z_STRVAL_P(subject), Z_STRLEN_P(subject), 1);
 	zval_ptr_dtor(&subject);
 
 	return SUCCESS;
@@ -768,7 +775,7 @@ static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *retu
 				Z_ADDREF_P(subject_return);
 				switch (zend_hash_get_current_key(Z_ARRVAL_P(subjects), &string_key, &num_key, 0)) {
 					case HASH_KEY_IS_STRING:
-						add_assoc_zval_ex(return_value, (const char *)string_key, strlen(string_key) + 1, subject_return);
+						add_assoc_zval_ex(return_value, (char *)string_key, strlen(string_key) + 1, subject_return);
 						break;
 					case HASH_KEY_IS_LONG:
 						zend_hash_index_update(Z_ARRVAL_P(return_value), num_key, &subject_return, sizeof(zval *), NULL);
@@ -929,7 +936,7 @@ PHP_FUNCTION(re2_match_all)
 			if (iter != named_groups.end()) {
 				/* this index also has a named group */
 				std::string name = iter->second;
-				add_assoc_zval_ex(matches_out, (const char *)name.c_str(), name.length() + 1, match_array);
+				add_assoc_zval_ex(matches_out, (char *)name.c_str(), name.length() + 1, match_array);
 				match_arrays[j++] = match_array;
 				MAKE_STD_ZVAL(match_array);
 				array_init(match_array);
@@ -1111,7 +1118,7 @@ PHP_FUNCTION(re2_quote)
 
 	subject_str = std::string(subject, subject_len);
 	out_str = RE2::QuoteMeta(subject_str);
-	RETVAL_STRINGL(out_str.c_str(), out_str.length(), 1);
+	RETVAL_STRINGL((char *)out_str.c_str(), out_str.length(), 1);
 }
 /*	}}} */
 
@@ -1160,7 +1167,7 @@ PHP_METHOD(RE2, getPattern)
 	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
 
 	pattern = obj->re->pattern();
-	RETURN_STRINGL(pattern.c_str(), pattern.length(), 1);
+	RETURN_STRINGL((char *)pattern.c_str(), pattern.length(), 1);
 }
 /*	}}} */
 
@@ -1187,8 +1194,11 @@ PHP_METHOD(Re2Options, __construct)
 	Returns the encoding to use for the pattern and subject strings, "utf8" or "latin1". */
 PHP_METHOD(Re2Options, getEncoding)
 {
+	char *encoding;
+
 	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
-	RETURN_STRING(obj->options->encoding() == RE2::Options::EncodingUTF8 ? "utf8" : "latin1", 1);
+	encoding = (char *)(obj->options->encoding() == RE2::Options::EncodingUTF8 ? "utf8" : "latin1");
+	RETURN_STRING(encoding, 1);
 }
 /*	}}} */
 
@@ -1499,27 +1509,27 @@ PHP_MINIT_FUNCTION(re2)
 	/* register RE2 class */
 	zend_class_entry ce;
 	INIT_CLASS_ENTRY(ce, PHP_RE2_CLASS_NAME, re2_class_functions);
-	php_re2_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
-	zend_declare_property_null(php_re2_class_entry, "options", strlen("options"), ZEND_ACC_PROTECTED TSRMLS_CC);
-	php_re2_class_entry->create_object = re2_object_new;
 	memcpy(&re2_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	re2_object_handlers.clone_obj = re2_object_clone;
+	php_re2_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	php_re2_class_entry->create_object = re2_object_new;
+	zend_declare_property_null(php_re2_class_entry, "options", strlen("options"), ZEND_ACC_PROTECTED TSRMLS_CC);
 
 	/* register RE2_Options class */
 	INIT_CLASS_ENTRY(ce, PHP_RE2_OPTIONS_CLASS_NAME, re2_options_class_functions);
-	php_re2_options_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
-	php_re2_options_class_entry->create_object = re2_options_object_new;
 	memcpy(&re2_options_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	re2_options_object_handlers.clone_obj = re2_options_object_clone;
+	php_re2_options_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	php_re2_options_class_entry->create_object = re2_options_object_new;
 
 	/* register RE2_Set class */
 	INIT_CLASS_ENTRY(ce, PHP_RE2_SET_CLASS_NAME, re2_set_class_functions);
-	php_re2_set_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
-	zend_declare_property_bool(php_re2_set_class_entry, "hasPattern", strlen("hasPattern"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
-	zend_declare_property_bool(php_re2_set_class_entry, "isCompiled", strlen("isCompiled"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
-	php_re2_set_class_entry->create_object = re2_set_object_new;
 	memcpy(&re2_set_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
 	/* todo: re2_set_object_handlers.clone_obj = re2_set_object_clone; */
+	php_re2_set_class_entry = zend_register_internal_class(&ce TSRMLS_CC);
+	php_re2_set_class_entry->create_object = re2_set_object_new;
+	zend_declare_property_bool(php_re2_set_class_entry, "hasPattern", strlen("hasPattern"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
+	zend_declare_property_bool(php_re2_set_class_entry, "isCompiled", strlen("isCompiled"), 0, ZEND_ACC_PROTECTED TSRMLS_CC);
 
 	/* register RE2_IllegalStateException */
 	INIT_CLASS_ENTRY(ce, PHP_RE2_ILLEGAL_STATE_EXCEPTION_CLASS_NAME, NULL);
