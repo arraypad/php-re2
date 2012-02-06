@@ -621,15 +621,21 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 /*	}}} */
 
 #define RE2_ENSURE_ARRAY(name) \
-	if (Z_TYPE_P(name##s) == IS_ARRAY) { \
-		name##_array = name##s; \
+	if (Z_TYPE_PP(name##s) == IS_ARRAY) { \
+		name##_array = *name##s; \
 		name##_count = zend_hash_num_elements(Z_ARRVAL_P(name##_array)); \
 		zend_hash_internal_pointer_reset(Z_ARRVAL_P(name##_array)); \
 	} else { \
+		if (Z_TYPE_PP(name##s) != IS_STRING) { \
+			if (Z_ISREF_PP(name##s)) { \
+				SEPARATE_ZVAL(name##s); \
+			} \
+			convert_to_string_ex(name##s); \
+		} \
 		MAKE_STD_ZVAL(name##_array); \
 		array_init_size(name##_array, 1); \
-		Z_ADDREF_P(name##s); \
-		add_next_index_zval(name##_array, name##s); \
+		Z_ADDREF_PP(name##s); \
+		add_next_index_zval(name##_array, *name##s); \
 		created_##name##_array = true; \
 	}
 
@@ -673,9 +679,9 @@ static int _php_re2_get_pattern(zval *pattern, RE2 **re, int *argc, bool *was_ne
 }
 
 /* _php2_re2_replace_subject() {{{ */
-static int _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_value,
+static int _php_re2_replace_subject(zval **patterns, zval *subject, zval *return_value,
 	int *count, long limit, long flags, bool is_filter,
-	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache TSRMLS_DC)
+	zval **replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache TSRMLS_DC)
 {
 	int argc, pattern_i = 0, replace_i = 0, pattern_count = 1, replace_count = 1, replace_len;
 	RE2 *re;
@@ -745,9 +751,9 @@ static int _php_re2_replace_subject(zval *patterns, zval *subject, zval *return_
 /*	}}} */
 
 /* _php2_re2_replace_subjects() {{{ */
-static void _php_re2_replace_subjects(zval *patterns, zval *subjects, zval *return_value,
+static void _php_re2_replace_subjects(zval **patterns, zval *subjects, zval *return_value,
 	zval *count_zv, long limit, long flags, bool is_filter,
-	zval *replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache TSRMLS_DC)
+	zval **replaces, zend_fcall_info *replace_fci, zend_fcall_info_cache *replace_fci_cache TSRMLS_DC)
 {
 	zval **subject_ptr, *subject_return = NULL;
 	int count = 0, total_count = 0;
@@ -964,9 +970,9 @@ PHP_FUNCTION(re2_match_all)
 PHP_FUNCTION(re2_replace)
 {
 	long limit = 0, flags = 0;
-	zval *patterns, *replaces, *subjects, *count_zv = NULL;
+	zval **patterns, **replaces, *subjects, *count_zv = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zzz|lz", &patterns, &replaces, &subjects, &limit, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZZz|lz", &patterns, &replaces, &subjects, &limit, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -979,9 +985,9 @@ PHP_FUNCTION(re2_replace)
 PHP_FUNCTION(re2_filter)
 {
 	long limit = 0, flags = 0;
-	zval *patterns, *replaces, *subjects, *count_zv = NULL;
+	zval **patterns, **replaces, *subjects, *count_zv = NULL;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zzz|lz", &patterns, &replaces, &subjects, &limit, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ZZz|lz", &patterns, &replaces, &subjects, &limit, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
@@ -993,12 +999,12 @@ PHP_FUNCTION(re2_filter)
 	Replaces all matches of the pattern with the value returned by the replacement callback. */
 PHP_FUNCTION(re2_replace_callback)
 {
-	zval *patterns, *subjects, *count_zv = NULL;
+	zval **patterns, *subjects, *count_zv = NULL;
 	zend_fcall_info fci;
 	zend_fcall_info_cache fci_cache;
 	long limit = 0, flags = 0;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "zfz|lz", &patterns, &fci, &fci_cache, &subjects, &limit, &count_zv) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "Zfz|lz", &patterns, &fci, &fci_cache, &subjects, &limit, &count_zv) == FAILURE) {
 		RETURN_FALSE;
 	}
 
