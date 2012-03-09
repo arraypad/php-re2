@@ -119,9 +119,10 @@ Classes
 
 Represents a compiled regex pattern.
 
-#### Re2 Re2::__construct(string $pattern [, RE2_Options $options])
+#### Re2 Re2::__construct(string $pattern [, RE2_Options $options [, bool $force_cache = false]])
 
 Construct a new Re2 object.
+If `$force_cache` is `true` the cache will be used regardless of the re2.cache_enabled ini setting.
 
 #### string Re2::getPattern()
 
@@ -222,3 +223,10 @@ Allow `\b \B` (word boundary and not) when in posix_syntax mode.
 
 Default `false`.
 `^` and `$` only match beginning and end of text when in posix_syntax mode.
+
+Runtime configuration
+=======
+
+#### re2.cache_enabled = false (PHP_INI_ALL)
+
+When set to `true`, uses a cache (per process) to store all compiled patterns. The cache can be used even when `re2.cache_enabled` is set to `false` by passing the `$force_cache` parameter to the Re2 constructor.

@@ -41,6 +41,12 @@ extern "C" {
 # define Z_DELREF_PP(arg) ZVAL_DELREF(*(arg))
 #endif
 
+ZEND_DECLARE_MODULE_GLOBALS(re2);
+static PHP_GINIT_FUNCTION(re2)
+{
+	memset(re2_globals, 0, sizeof(zend_re2_globals));
+}
+
 /* {{{ arg info */
 ZEND_BEGIN_ARG_INFO_EX(arginfo_re2_match, 0, 0, 2)
 	ZEND_ARG_INFO(0, pattern)
@@ -181,6 +187,7 @@ zend_object_handlers re2_set_object_handlers;
 struct re2_object {
 	zend_object std;
 	RE2 *re;
+	bool cached;
 };
 
 struct re2_options_object {
@@ -196,7 +203,10 @@ struct re2_set_object {
 void re2_free_storage(void *object TSRMLS_DC)
 {
 	re2_object *obj = (re2_object *)object;
-	delete obj->re;
+	
+	if (!obj->cached) {
+		delete obj->re;
+	}
 
 	zend_objects_free_object_storage((zend_object *)object TSRMLS_CC);
 }
@@ -242,6 +252,8 @@ zend_object_value re2_object_clone(zval *this_ptr TSRMLS_DC)
 	zend_objects_clone_members(&new_obj->std, retval, &old_obj->std, Z_OBJ_HANDLE_P(this_ptr) TSRMLS_CC);
 
 	new_obj->re = new RE2(old_obj->re->pattern());
+	new_obj->cached = old_obj->cached;
+
 	/*
 	options = zend_read_property(old_obj->std.ce, this_ptr, "options", strlen("options"), 1 TSRMLS_CC);
 	options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
@@ -649,13 +661,28 @@ static long _php_re2_match_common(RE2 *re, zval **matches, zval *matches_out,
 		delete re; \
 	}
 
-static int _php_re2_get_pattern(zval *pattern, RE2 **re, int *argc, bool *was_new)
+static int _php_re2_get_pattern(zval *pattern, RE2 **re, int *argc, bool *was_new TSRMLS_DC)
 {
+	bool cache_hit = false, cache_save = false;
+
 	*was_new = false;
+
 	if (Z_TYPE_P(pattern) == IS_STRING) {
-		std::string pattern_str = std::string(Z_STRVAL_P(pattern), Z_STRLEN_P(pattern));
-		*re = new RE2(pattern_str);
-		*was_new = true;
+		if (RE2_G(cache_enabled)) {
+			RE2 **cached_re;
+			if (zend_hash_find(RE2_G(cache_store), Z_STRVAL_P(pattern), Z_STRLEN_P(pattern) + 1, (void **)&cached_re) == SUCCESS) {
+				*re = *cached_re;
+				cache_hit = true;
+			} else {
+				cache_save = true;
+			}
+		}
+
+		if (!cache_hit) {
+			std::string pattern_str = std::string(Z_STRVAL_P(pattern), Z_STRLEN_P(pattern));
+			*re = new RE2(pattern_str);
+			*was_new = !cache_save;
+		}
 	} else if (Z_TYPE_P(pattern) == IS_OBJECT && instanceof_function(Z_OBJCE_P(pattern), php_re2_class_entry TSRMLS_CC)) {
 		re2_object *obj = (re2_object *)zend_object_store_get_object(pattern TSRMLS_CC);
 		*re = obj->re;
@@ -673,6 +700,10 @@ static int _php_re2_get_pattern(zval *pattern, RE2 **re, int *argc, bool *was_ne
 	if (*argc == -1) {
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, "Invalid pattern");
 		return FAILURE;
+	}
+
+	if (cache_save) {
+		zend_hash_update(RE2_G(cache_store), Z_STRVAL_P(pattern), Z_STRLEN_P(pattern) + 1, (void *)re, sizeof(RE2 *), NULL);
 	}
 
 	return SUCCESS;
@@ -701,7 +732,7 @@ static int _php_re2_replace_subject(zval **patterns, zval *subject, zval *return
 	SEPARATE_ZVAL(&subject);
 
 	while (zend_hash_get_current_data(Z_ARRVAL_P(pattern_array), (void **)&pattern_ptr) == SUCCESS) {
-		if (_php_re2_get_pattern(*pattern_ptr, &re, &argc, &was_new) == FAILURE) {
+		if (_php_re2_get_pattern(*pattern_ptr, &re, &argc, &was_new TSRMLS_CC) == FAILURE) {
 			RE2_FREE_PATTERN;
 			RE2_FREE_ARRAY(pattern);
 			RE2_FREE_ARRAY(replace);
@@ -815,7 +846,7 @@ static void _php_re2_replace_subjects(zval **patterns, zval *subjects, zval *ret
 
 /*	{{{ options object helpers */
 /* static inline int _create_re2_options_object(zval *options) {{{ */
-static inline int _create_re2_options_object(zval *options)
+static inline int _create_re2_options_object(zval *options TSRMLS_DC)
 {
 	zval *ctor, unused;
 
@@ -834,11 +865,41 @@ static inline int _create_re2_options_object(zval *options)
 }
 /* }}} */
 
+/* {{{ re2_options_hash
+ */
+static char *re2_options_hash(zval *options TSRMLS_DC)
+{
+	char *hash;
+	re2_options_object *obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
+
+	spprintf(&hash, RE2_OPTIONS_HASH_LEN, "%c%c%x",
+		1 | 
+		obj->options->posix_syntax()	<< 1 |
+		obj->options->longest_match()	<< 2 |
+		obj->options->log_errors()		<< 3 |
+		obj->options->literal()			<< 4 |
+		obj->options->never_nl()		<< 5 |
+		obj->options->case_sensitive()	<< 6 |
+		obj->options->perl_classes()	<< 7,
+
+		1 |
+		obj->options->word_boundary()	<< 1 |
+		obj->options->one_line()		<< 2 |
+		(obj->options->encoding() == RE2::Options::EncodingUTF8) << 3,
+
+		obj->options->max_mem()
+	);
+
+	return hash;
+}
+/* }}} */
+
+
 #define PHP_RE2_CREATE_OPTIONS_OBJECT \
 	MAKE_STD_ZVAL(options); \
 	Z_TYPE_P(options) = IS_OBJECT; \
 	object_init_ex(options, php_re2_options_class_entry); \
-	if(_create_re2_options_object(options) == FAILURE) { \
+	if(_create_re2_options_object(options TSRMLS_CC) == FAILURE) { \
 		zval_add_ref(&options); \
 		zval_ptr_dtor(&options); \
 		RETURN_NULL(); \
@@ -866,7 +927,7 @@ PHP_FUNCTION(re2_match)
 
 	RETVAL_FALSE;
 
-	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new) == FAILURE) {
+	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new TSRMLS_CC) == FAILURE) {
 		RE2_FREE_PATTERN;
 		return;
 	}
@@ -911,7 +972,7 @@ PHP_FUNCTION(re2_match_all)
 	}
 
 	RETVAL_FALSE;
-	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new) == FAILURE) {
+	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new TSRMLS_CC) == FAILURE) {
 		RE2_FREE_PATTERN;
 		return;
 	}
@@ -1031,7 +1092,7 @@ PHP_FUNCTION(re2_grep)
 		RETURN_FALSE;
 	}
 
-	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new) == FAILURE) {
+	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new TSRMLS_CC) == FAILURE) {
 		RE2_FREE_PATTERN;
 		RETURN_FALSE;
 	}
@@ -1097,7 +1158,7 @@ PHP_FUNCTION(re2_split)
 		RETURN_FALSE;
 	}
 
-	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new) == FAILURE) {
+	if (_php_re2_get_pattern(pattern, &re, &argc, &was_new TSRMLS_CC) == FAILURE) {
 		RE2_FREE_PATTERN;
 		RETURN_FALSE;
 	}
@@ -1128,42 +1189,82 @@ PHP_FUNCTION(re2_quote)
 }
 /*	}}} */
 
-/*	{{{ proto RE2 RE2::__construct(string $pattern [, Re2Options $options])
+/*	{{{ proto RE2 RE2::__construct(string $pattern [, Re2Options $options [, bool $force_cache = false]])
 	Construct a new RE2 object from the given pattern. */
 PHP_METHOD(RE2, __construct)
 {
-	char *pattern;
-	int pattern_len;
-	zval *options;
+	char *pattern, *cache_key = NULL, *options_hash = NULL;
+	int pattern_len, cache_key_len, options_hash_len = 0;
+	zval *options = NULL;
 	std::string pattern_str;
+	zend_bool force_cache = 0;
+	bool cache_hit = false, cache_save = false, default_options = false;
+	RE2 *re2_obj;
 
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|O", &pattern, &pattern_len, &options, php_re2_options_class_entry) == FAILURE) {
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|O!b", &pattern, &pattern_len, &options, php_re2_options_class_entry, &force_cache) == FAILURE) {
 		RETURN_NULL();
 	}
 
-	if (ZEND_NUM_ARGS() == 1) {
+	if (options == NULL) {
 		PHP_RE2_CREATE_OPTIONS_OBJECT
+	} else if (force_cache || RE2_G(cache_enabled)) {
+		options_hash = re2_options_hash(options TSRMLS_CC);
+		options_hash_len = strlen(options_hash);
 	}
 
 	zend_update_property(php_re2_class_entry, getThis(), "options", strlen("options"), options TSRMLS_CC);
 
 	/* create re2 object */
-	pattern_str = std::string(pattern, pattern_len);
-	re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
-	RE2 *re2_obj = new RE2(pattern_str, *options_obj->options);
+	if (force_cache || RE2_G(cache_enabled)) {
+		RE2 **cached_re;
+
+		cache_key_len = pattern_len + 2 + options_hash_len;
+		spprintf(&cache_key, cache_key_len, "%s/%s", pattern, options_hash ? options_hash : "");
+
+		if (zend_hash_find(RE2_G(cache_store), cache_key, cache_key_len, (void **)&cached_re) == SUCCESS) {
+			re2_obj = *cached_re;
+			cache_hit = true;
+		} else {
+			cache_save = true;
+		}
+	}
+
+	if (options_hash_len) {
+		efree(options_hash);
+	}
+
+	if (!cache_hit) {
+		pattern_str = std::string(pattern, pattern_len);
+		re2_options_object *options_obj = (re2_options_object *)zend_object_store_get_object(options TSRMLS_CC);
+		re2_obj = new RE2(pattern_str, *options_obj->options);
+	}
 
 	if (!re2_obj->ok()) {
 		const char *error = re2_obj->error().c_str();
+
+		if (cache_key) {
+			efree(cache_key);
+		}
+
 		zend_throw_exception(php_re2_invalid_pattern_exception_class_entry, (char *)error, 0 TSRMLS_CC);
+		delete re2_obj;
 		RETURN_NULL();
 	}
 
 	re2_object *obj = (re2_object *)zend_object_store_get_object(getThis() TSRMLS_CC);
+	obj->cached = cache_hit || cache_save;
+
+	if (cache_save) {
+		zend_hash_update(RE2_G(cache_store), cache_key, cache_key_len, (void *)&re2_obj, sizeof(RE2 *), NULL);
+	}
+
+	if (cache_key) {
+		efree(cache_key);
+	}
+
 	obj->re = re2_obj;
 }
 /*	}}} */
-
-/* {{{ RE2 options */
 
 /*	{{{ proto string RE2::getPattern()
 	Returns the pattern used by this instance. */
@@ -1176,6 +1277,9 @@ PHP_METHOD(RE2, getPattern)
 	RETURN_STRINGL((char *)pattern.c_str(), pattern.length(), 1);
 }
 /*	}}} */
+
+
+/* {{{ RE2 options */
 
 /*	{{{ proto Re2Options RE2::getOptions()
 	Returns the Re2Options for this instance. */
@@ -1491,14 +1595,18 @@ zend_module_entry re2_module_entry = {
 	"re2",
 	re2_functions,
 	PHP_MINIT(re2),
-	NULL,
+	PHP_MSHUTDOWN(re2),
 	NULL,
 	NULL,
 	PHP_MINFO(re2),
 #if ZEND_MODULE_API_NO >= 20010901
 	PHP_RE2_EXTVER,
 #endif
-	STANDARD_MODULE_PROPERTIES
+	PHP_MODULE_GLOBALS(re2),
+	PHP_GINIT(re2),
+	NULL,
+	NULL,
+	STANDARD_MODULE_PROPERTIES_EX
 };
 /* }}} */
 
@@ -1508,10 +1616,28 @@ ZEND_GET_MODULE(re2)
 }
 #endif
 
+/* {{{ PHP_INI
+ */
+extern "C" {
+PHP_INI_BEGIN()
+	STD_PHP_INI_BOOLEAN("re2.cache_enabled", "0", PHP_INI_ALL, OnUpdateBool, cache_enabled, zend_re2_globals, re2_globals)
+PHP_INI_END()
+}
+/* }}} */
+
+/* {{{ re2_free_re */
+static void re2_free_re(void **re)
+{
+	delete (RE2 *)*re;
+}
+/* }}} */
+
 /* {{{ PHP_MINIT_FUNCTION
  */
 PHP_MINIT_FUNCTION(re2)
 {
+	REGISTER_INI_ENTRIES();
+
 	/* register RE2 class */
 	zend_class_entry ce;
 	INIT_CLASS_ENTRY(ce, PHP_RE2_CLASS_NAME, re2_class_functions);
@@ -1563,6 +1689,24 @@ PHP_MINIT_FUNCTION(re2)
 	REGISTER_LONG_CONSTANT("RE2_SPLIT_DELIM_CAPTURE", RE2_SPLIT_DELIM_CAPTURE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_SPLIT_OFFSET_CAPTURE", RE2_OFFSET_CAPTURE, CONST_CS | CONST_PERSISTENT);
 	REGISTER_LONG_CONSTANT("RE2_SPLIT_NO_EMPTY", RE2_SPLIT_NO_EMPTY, CONST_CS | CONST_PERSISTENT);
+
+	/* pattern cache */
+	RE2_G(cache_store) = (HashTable *) pemalloc(sizeof(HashTable), 1);
+	zend_hash_init(RE2_G(cache_store), 4, NULL, (dtor_func_t)re2_free_re, 1);
+
+	return SUCCESS;
+}
+/* }}} */
+
+/* {{{ PHP_MSHUTDOWN_FUNCTION
+ */
+PHP_MSHUTDOWN_FUNCTION(re2)
+{
+	UNREGISTER_INI_ENTRIES();
+
+	/* pattern cache */
+	zend_hash_destroy(RE2_G(cache_store));
+	pefree(RE2_G(cache_store), 1);
 
 	return SUCCESS;
 }

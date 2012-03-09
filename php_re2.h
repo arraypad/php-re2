@@ -85,8 +85,6 @@ PHP_METHOD(Re2Set, match);
 
 PHP_MINIT_FUNCTION(re2);
 PHP_MSHUTDOWN_FUNCTION(re2);
-PHP_RINIT_FUNCTION(re2);
-PHP_RSHUTDOWN_FUNCTION(re2);
 PHP_MINFO_FUNCTION(re2);
 
 #ifdef __cplusplus
@@ -98,6 +96,13 @@ PHP_MINFO_FUNCTION(re2);
 #else
 #define RE2_G(v) (re2_globals.v)
 #endif
+
+ZEND_BEGIN_MODULE_GLOBALS(re2)
+	zend_bool cache_enabled;
+	HashTable *cache_store;
+ZEND_END_MODULE_GLOBALS(re2)
+
+#define RE2_OPTIONS_HASH_LEN	8
 
 #endif	/* PHP_RE2_H */
 
