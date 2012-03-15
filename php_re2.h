@@ -20,7 +20,7 @@
 #ifndef PHP_RE2_H
 #define PHP_RE2_H
 
-#define PHP_RE2_EXTVER "0.0.1-dev"
+#define PHP_RE2_EXTVER "0.0.2-dev"
 
 #ifdef __cplusplus
 extern "C" {

@@ -1719,6 +1719,7 @@ PHP_MINFO_FUNCTION(re2)
 	php_info_print_table_start();
 	php_info_print_table_header(2, "re2 support", "enabled");
 	php_info_print_table_row(2, "re2 version", PHP_RE2_EXTVER);
+	php_info_print_table_row(2, "cache enabled", RE2_G(cache_enabled) ? "Yes" : "No");
 	php_info_print_table_end();
 }
 /* }}} */
