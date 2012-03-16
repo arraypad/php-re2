@@ -1720,6 +1720,8 @@ PHP_MINFO_FUNCTION(re2)
 	php_info_print_table_header(2, "re2 support", "enabled");
 	php_info_print_table_row(2, "re2 version", PHP_RE2_EXTVER);
 	php_info_print_table_end();
+
+	DISPLAY_INI_ENTRIES();
 }
 /* }}} */
 
